@@ -1,0 +1,17 @@
+{
+  "name": "拼豆豆图生成器",
+  "short_name": "拼豆豆图",
+  "description": "把图片转成拼豆豆图，适配 104/78/52/32 等主流智能拼豆板，图纸可导入拼豆 App",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F5F2",
+  "theme_color": "#F57C2A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}
