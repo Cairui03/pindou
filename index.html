@@ -277,6 +277,14 @@
         <label><input type="radio" name="fit" value="stretch"> 拉伸变形</label>
       </div>
 
+      <span class="opt-label">颜色精简（大色块里不再深浅不一）</span>
+      <select id="simplify">
+        <option value="0">关闭 · 保留全部颜色</option>
+        <option value="1">轻度 · 只去掉零散单颗</option>
+        <option value="2" selected>中度 · 合并相近深浅色（推荐）</option>
+        <option value="3">强力 · 大片平涂，卡通首选</option>
+      </select>
+
       <span class="opt-label">亮度</span>
       <div class="slider-row"><input type="range" id="adjBright" min="-60" max="60" step="1" value="0"><span class="v" id="vBright">0</span></div>
       <span class="opt-label">对比度</span>
@@ -348,6 +356,7 @@
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportGrid" checked> 图纸网格</label>
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportLabels" checked> 行列坐标</label>
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="fillEmpty" checked> 空豆填白</label>
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="codeSkipBg" checked> 背景格不标色号</label>
     </div>
     <div class="row">
       <label>色号表内容</label>
@@ -397,7 +406,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v4</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v5</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -525,6 +534,135 @@ function addErr(px, err, k){
   px[0] = clamp255(px[0] + err[0]*k);
   px[1] = clamp255(px[1] + err[1]*k);
   px[2] = clamp255(px[2] + err[2]*k);
+}
+
+/* 重新统计每色用量 */
+function recountGrid(grid, paletteLen){
+  var counts = new Array(paletteLen).fill(0);
+  for (var y = 0; y < grid.length; y++){
+    for (var x = 0; x < grid[y].length; x++){
+      var v = grid[y][x];
+      if (v !== null) counts[v]++;
+    }
+  }
+  return counts;
+}
+
+/*
+ * 去杂色：把零散的单颗/小簇并到周围占多数的那种豆子。
+ * 判据刻意保守——只有"自己这一色在 8 邻格里出现不超过 1 次、且有别的颜色占了 5 格以上"
+ * 才改。这样 1 格宽的描边、线条不会被吃掉（它们在邻格里至少还有 2 个同伴）。
+ */
+function despeckleGrid(grid, rows, cols, passes){
+  var g = grid.map(function(r){ return r.slice(); });
+  for (var p = 0; p < passes; p++){
+    var next = g.map(function(r){ return r.slice(); });
+    for (var y = 0; y < rows; y++){
+      for (var x = 0; x < cols; x++){
+        var cur = g[y][x];
+        if (cur === null) continue;
+        /* 只看上下左右四邻：四邻里只要还有一个同色，就算"有线连着"，不动它。
+           这样 1 格宽的描边、短线、文字笔画都不会被一点点啃掉。 */
+        var n4 = [];
+        if (x > 0) n4.push(g[y][x - 1]);
+        if (x < cols - 1) n4.push(g[y][x + 1]);
+        if (y > 0) n4.push(g[y - 1][x]);
+        if (y < rows - 1) n4.push(g[y + 1][x]);
+        var tally = {}, same = 0, best = -1, bestN = 0, i4;
+        for (i4 = 0; i4 < n4.length; i4++){
+          var v = n4[i4];
+          if (v === null) continue;
+          if (v === cur){ same++; continue; }
+          tally[v] = (tally[v] || 0) + 1;
+          if (tally[v] > bestN){ bestN = tally[v]; best = v; }
+        }
+        if (same === 0 && bestN >= 2) next[y][x] = best;
+      }
+    }
+    g = next;
+  }
+  return g;
+}
+
+/*
+ * 相近色合并：按用量从多到少扫一遍，用色少的如果和某个用色多的颜色足够接近，
+ * 就整体并过去。大色块里的"深浅不一"就是靠这步压平的（脸部、衣服最常见）。
+ */
+function mergeSimilarColors(grid, counts, palette, thresh){
+  var used = [];
+  for (var i = 0; i < counts.length; i++) if (counts[i] > 0) used.push(i);
+  used.sort(function(a, b){ return counts[b] - counts[a]; });
+  var map = {}, kept = [], k, q;
+  for (k = 0; k < used.length; k++){
+    var idx = used[k], target = -1, bestD = Infinity;
+    for (q = 0; q < kept.length; q++){
+      /* labDist 返回的是平方距离，这里要的是真实色差，开个根 */
+      var d = Math.sqrt(labDist(palette[idx].lab, palette[kept[q]].lab));
+      if (d < bestD){ bestD = d; target = kept[q]; }
+    }
+    if (target >= 0 && bestD <= thresh) map[idx] = target;
+    else { kept.push(idx); map[idx] = idx; }
+  }
+  return grid.map(function(row){
+    return row.map(function(v){ return v === null ? null : map[v]; });
+  });
+}
+
+/*
+ * 区域统一（治"大片背景被劈成两个颜色"）：
+ * 有时候原图一个纯色块，正好卡在色板两个颜色的正中间（比如浅蓝卡在 C4 和 C13 中间），
+ * 一点点噪点就会让格子五五开地跳到两边，看起来就是一片花。
+ * 解决办法是按"原图像素颜色"把画面切成一块块区域（不看量化结果，所以不会被劈开），
+ * 每块区域取平均色，重新配一个最接近的色板色，整块统一。
+ * 太小的区域（细节、描边、抗锯齿过渡）不动。
+ */
+function unifyRegions(grid, pixels, rows, cols, palette, tol, minCells){
+  var n = rows * cols, seen = new Uint8Array(n), i, k;
+  var out = grid.map(function(r){ return r.slice(); });
+  var lab = new Array(n);
+  for (i = 0; i < n; i++){
+    var py0 = Math.floor(i / cols), px0 = i % cols, c0 = pixels[py0][px0];
+    lab[i] = c0 ? srgbToLab(c0[0], c0[1], c0[2]) : null;
+  }
+  var stack = [], members = [];
+  for (var s = 0; s < n; s++){
+    if (seen[s]) continue;
+    seen[s] = 1;
+    if (!lab[s]) continue;
+    var seed = lab[s];
+    members.length = 0;
+    stack.length = 0;
+    stack.push(s);
+    while (stack.length){
+      var p = stack.pop();
+      members.push(p);
+      var py = Math.floor(p / cols), px = p % cols, nbr = [];
+      if (px > 0) nbr.push(p - 1);
+      if (px < cols - 1) nbr.push(p + 1);
+      if (py > 0) nbr.push(p - cols);
+      if (py < rows - 1) nbr.push(p + cols);
+      for (k = 0; k < nbr.length; k++){
+        var q = nbr[k];
+        if (seen[q]) continue;
+        var lq = lab[q];
+        if (!lq){ seen[q] = 1; continue; }
+        if (Math.sqrt(labDist(lq, seed)) <= tol){ seen[q] = 1; stack.push(q); }
+      }
+    }
+    if (members.length < minCells) continue;
+    var sr = 0, sg = 0, sb = 0, cnt = 0;
+    for (i = 0; i < members.length; i++){
+      var my = Math.floor(members[i] / cols), mx = members[i] % cols, pc = pixels[my][mx];
+      if (!pc) continue;
+      sr += pc[0]; sg += pc[1]; sb += pc[2]; cnt++;
+    }
+    if (!cnt) continue;
+    var idx = matchColor(sr / cnt, sg / cnt, sb / cnt, palette);
+    for (i = 0; i < members.length; i++){
+      out[Math.floor(members[i] / cols)][members[i] % cols] = idx;
+    }
+  }
+  return out;
 }
 /* 列标注：0->A 25->Z 26->AA */
 function colLabel(i){
@@ -828,6 +966,7 @@ document.addEventListener("DOMContentLoaded", function(){
       adjBright = $("adjBright"), vBright = $("vBright"), adjContrast = $("adjContrast"), vContrast = $("vContrast"),
       adjSat = $("adjSat"), vSat = $("vSat"), adjReset = $("adjReset"),
       removeBgChk = $("removeBg"), bgThresh = $("bgThresh"), vBg = $("vBg"),
+      simplifySel = $("simplify"),
       convertBtn = $("convertBtn"),
       previewWrap = $("previewWrap"), canvasSizer = $("canvasSizer"), previewCanvas = $("previewCanvas"),
       previewPlaceholder = $("previewPlaceholder"), zoom = $("zoom"), previewGridChk = $("previewGrid"),
@@ -838,6 +977,7 @@ document.addEventListener("DOMContentLoaded", function(){
       countsBox = $("counts"),
       pixelScale = $("pixelScale"), sheetCellPx = $("sheetCellPx"), exportGridChk = $("exportGrid"),
       exportLabelsChk = $("exportLabels"), fillEmptyChk = $("fillEmpty"), csvMode = $("csvMode"),
+      codeSkipBgChk = $("codeSkipBg"),
       cellCodesSel = $("cellCodes"),
       shareBtn = $("shareBtn"), exportPixelBtn = $("exportPixel"), exportSheetBtn = $("exportSheet"),
       exportCsvBtn = $("exportCsv"), exportJsonBtn = $("exportJson"), exportCountsBtn = $("exportCounts"),
@@ -855,6 +995,15 @@ document.addEventListener("DOMContentLoaded", function(){
     lastBlob: null, lastName: "", resultUrl: null
   };
   var ditherMode = "smooth", fitMode = "cover";
+  /* 颜色精简档位：
+     passes = 去杂色遍数；merge = 相近色合并阈值（Lab 色差）；
+     region = 区域统一的容差与最小格数（把被劈成两色的整片区域并回一色） */
+  var SIMPLIFY = {
+    "0": null,
+    "1": { passes: 1, merge: 4 },
+    "2": { passes: 2, merge: 9, region: { tol: 6, min: 8 } },
+    "3": { passes: 3, merge: 13, region: { tol: 9, min: 5 } }
+  };
   var autoTimer = null, needsFit = true, renderPending = false;
 
   /* ---------------- 小工具 ---------------- */
@@ -1094,6 +1243,7 @@ document.addEventListener("DOMContentLoaded", function(){
     bgThresh.disabled = !removeBgChk.checked;
     autoConvert();
   });
+  simplifySel.addEventListener("change", autoConvert);
   bgThresh.addEventListener("input", function(){ vBg.textContent = bgThresh.value; });
   bgThresh.addEventListener("change", function(){ autoConvert(); });
 
@@ -1164,8 +1314,25 @@ document.addEventListener("DOMContentLoaded", function(){
     var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
     var pixels = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt);
     var res = quantize(pixels, state.rows, state.cols, state.palette, ditherMode === "dither");
-    state.grid = res.grid;
-    state.counts = res.counts;
+    var grid = res.grid, counts = res.counts;
+    /* 颜色精简：先并掉零散单颗，再把相近的深浅色合成一种 */
+    var lvl = SIMPLIFY[simplifySel.value];
+    if (lvl){
+      if (lvl.region){
+        grid = unifyRegions(grid, pixels, state.rows, state.cols, state.palette, lvl.region.tol, lvl.region.min);
+        counts = recountGrid(grid, state.palette.length);
+      }
+      if (lvl.passes){
+        grid = despeckleGrid(grid, state.rows, state.cols, lvl.passes);
+        counts = recountGrid(grid, state.palette.length);
+      }
+      if (lvl.merge){
+        grid = mergeSimilarColors(grid, counts, state.palette, lvl.merge);
+        counts = recountGrid(grid, state.palette.length);
+      }
+    }
+    state.grid = grid;
+    state.counts = counts;
     recalcTotals();
     state.undoStack = [];
     if (state.brush >= state.palette.length || !state.counts[state.brush]) pickDefaultBrush();
@@ -1253,8 +1420,43 @@ document.addEventListener("DOMContentLoaded", function(){
     var raf = window.requestAnimationFrame || function(fn){ return setTimeout(fn, 16); };
     raf(function(){ renderPending = false; renderPreview(); });
   }
-  /* codeMode 非空时，每格中央印上色号（"name" 用色卡名如 A14，"idx" 用编号） */
-  function drawGridToCtx(ctx, grid, palette, cellPx, showGrid, labels, whiteEmpty, codeMode){
+  /*
+   * 背景区域识别：从最外圈出发，只沿着"和边框上最主流的那个颜色相同"的格子蔓延。
+   * 得到的就是整片背景，标色号时可以把它跳过去（大面积纯色不需要每格都印同一个号）。
+   */
+  function backgroundMask(grid, rows, cols){
+    var tally = {}, x, y, k;
+    for (x = 0; x < cols; x++){ tally[grid[0][x]] = (tally[grid[0][x]] || 0) + 1; tally[grid[rows-1][x]] = (tally[grid[rows-1][x]] || 0) + 1; }
+    for (y = 0; y < rows; y++){ tally[grid[y][0]] = (tally[grid[y][0]] || 0) + 1; tally[grid[y][cols-1]] = (tally[grid[y][cols-1]] || 0) + 1; }
+    var bg = -1, bgN = 0;
+    for (k in tally){ if (tally[k] > bgN){ bgN = tally[k]; bg = parseInt(k, 10); } }
+    var mask = new Uint8Array(rows * cols);
+    if (isNaN(bg)) return mask;
+    var stack = [];
+    for (x = 0; x < cols; x++){
+      if (grid[0][x] === bg) stack.push(x);
+      if (grid[rows-1][x] === bg) stack.push((rows-1) * cols + x);
+    }
+    for (y = 0; y < rows; y++){
+      if (grid[y][0] === bg) stack.push(y * cols);
+      if (grid[y][cols-1] === bg) stack.push(y * cols + cols - 1);
+    }
+    while (stack.length){
+      var p = stack.pop();
+      if (mask[p]) continue;
+      mask[p] = 1;
+      var py = Math.floor(p / cols), px = p % cols;
+      if (px > 0 && grid[py][px-1] === bg && !mask[p-1]) stack.push(p-1);
+      if (px < cols-1 && grid[py][px+1] === bg && !mask[p+1]) stack.push(p+1);
+      if (py > 0 && grid[py-1][px] === bg && !mask[p-cols]) stack.push(p-cols);
+      if (py < rows-1 && grid[py+1][px] === bg && !mask[p+cols]) stack.push(p+cols);
+    }
+    return mask;
+  }
+
+  /* codeMode 非空时，每格中央印上色号（"name" 用色卡名如 A14，"idx" 用编号）；
+     skipMask 里标记为 1 的格子（背景）跳过不印 */
+  function drawGridToCtx(ctx, grid, palette, cellPx, showGrid, labels, whiteEmpty, codeMode, skipMask){
     var rows = grid.length, cols = grid[0].length;
     var labelW = 0, labelH = 0, fontSize = 11;
     if (labels){
@@ -1309,7 +1511,7 @@ document.addEventListener("DOMContentLoaded", function(){
         ctx.fillRect(labelW + x * cellPx, labelH + y * cellPx, cellPx, cellPx);
         if (codeMode){
           var txt = cellCode(idx, palette, codeMode);
-          if (txt){
+          if (txt && !(skipMask && skipMask[y * cols + x])){
             var wantFs = codeFonts[txt] || codeBaseFs;
             if (wantFs !== lastCodeFs){
               ctx.font = "600 " + wantFs.toFixed(1) + CODE_FONT;
@@ -1575,7 +1777,8 @@ document.addEventListener("DOMContentLoaded", function(){
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, cv.width, cv.height);
     var codeMode = cellCodesSel.value === "none" ? null : cellCodesSel.value;
-    drawGridToCtx(ctx, state.grid, state.palette, cellPx, exportGridChk.checked, labels, false, codeMode);
+    var skipMask = (codeMode && codeSkipBgChk.checked) ? backgroundMask(state.grid, rows, cols) : null;
+    drawGridToCtx(ctx, state.grid, state.palette, cellPx, exportGridChk.checked, labels, false, codeMode, skipMask);
     return cv;
   }
   function showResult(blob, filename, tip){
