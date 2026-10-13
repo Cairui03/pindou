@@ -285,6 +285,15 @@
         <option value="3">强力 · 大片平涂，卡通首选</option>
       </select>
 
+      <span class="opt-label">细节增强（小尺寸板子更容易看清五官）</span>
+      <select id="sharpen">
+        <option value="0">关闭 · 边缘柔和</option>
+        <option value="0.5">轻度</option>
+        <option value="0.9" selected>标准 · 推荐</option>
+        <option value="1.4">强力 · 描边更硬</option>
+      </select>
+      <p class="hint">52 / 78 这种小尺寸，每格要吃掉十几个源像素，边缘会被平均磨平、五官糊成一团。开「标准」会让五官和描边在量化前先立起来，明显更能看清；觉得边缘太硬就调回「轻度」或「关闭」。</p>
+
       <span class="opt-label">亮度</span>
       <div class="slider-row"><input type="range" id="adjBright" min="-60" max="60" step="1" value="0"><span class="v" id="vBright">0</span></div>
       <span class="opt-label">对比度</span>
@@ -406,7 +415,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v5</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v6</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -534,6 +543,39 @@ function addErr(px, err, k){
   px[0] = clamp255(px[0] + err[0]*k);
   px[1] = clamp255(px[1] + err[1]*k);
   px[2] = clamp255(px[2] + err[2]*k);
+}
+
+/*
+ * 细节增强：对"每格平均色"跑一遍 unsharp mask。
+ * 小尺寸板子（52/78）每格要吃掉十几个源像素，边缘会被平均磨平，五官和描边
+ * 就糊在一起。先让边缘在量化前立起来，最后出来的豆图会清晰很多。
+ */
+function sharpenGrid(pixels, rows, cols, amount){
+  var out = [], y, x;
+  for (y = 0; y < rows; y++) out.push(new Array(cols));
+  for (y = 0; y < rows; y++){
+    for (x = 0; x < cols; x++){
+      var p = pixels[y][x];
+      if (!p){ out[y][x] = null; continue; }
+      var sr = 0, sg = 0, sb = 0, n = 0, dy, dx;
+      for (dy = -1; dy <= 1; dy++){
+        for (dx = -1; dx <= 1; dx++){
+          var ny = y + dy, nx = x + dx;
+          if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
+          var q = pixels[ny][nx];
+          if (!q) continue;
+          sr += q[0]; sg += q[1]; sb += q[2]; n++;
+        }
+      }
+      if (!n){ out[y][x] = [p[0], p[1], p[2]]; continue; }
+      out[y][x] = [
+        clamp255(p[0] + amount * (p[0] - sr / n)),
+        clamp255(p[1] + amount * (p[1] - sg / n)),
+        clamp255(p[2] + amount * (p[2] - sb / n))
+      ];
+    }
+  }
+  return out;
 }
 
 /* 重新统计每色用量 */
@@ -967,6 +1009,7 @@ document.addEventListener("DOMContentLoaded", function(){
       adjSat = $("adjSat"), vSat = $("vSat"), adjReset = $("adjReset"),
       removeBgChk = $("removeBg"), bgThresh = $("bgThresh"), vBg = $("vBg"),
       simplifySel = $("simplify"),
+      sharpenSel = $("sharpen"),
       convertBtn = $("convertBtn"),
       previewWrap = $("previewWrap"), canvasSizer = $("canvasSizer"), previewCanvas = $("previewCanvas"),
       previewPlaceholder = $("previewPlaceholder"), zoom = $("zoom"), previewGridChk = $("previewGrid"),
@@ -1001,8 +1044,8 @@ document.addEventListener("DOMContentLoaded", function(){
   var SIMPLIFY = {
     "0": null,
     "1": { passes: 1, merge: 4 },
-    "2": { passes: 2, merge: 9, region: { tol: 6, min: 8 } },
-    "3": { passes: 3, merge: 13, region: { tol: 9, min: 5 } }
+    "2": { passes: 2, merge: 9, region: { tol: 10, min: 8 } },
+    "3": { passes: 3, merge: 13, region: { tol: 14, min: 5 } }
   };
   var autoTimer = null, needsFit = true, renderPending = false;
 
@@ -1244,6 +1287,7 @@ document.addEventListener("DOMContentLoaded", function(){
     autoConvert();
   });
   simplifySel.addEventListener("change", autoConvert);
+  sharpenSel.addEventListener("change", autoConvert);
   bgThresh.addEventListener("input", function(){ vBg.textContent = bgThresh.value; });
   bgThresh.addEventListener("change", function(){ autoConvert(); });
 
@@ -1313,13 +1357,16 @@ document.addEventListener("DOMContentLoaded", function(){
     var adj = { bright: +adjBright.value, contrast: +adjContrast.value, sat: +adjSat.value };
     var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
     var pixels = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt);
+    var rawPixels = pixels;                       // 区域统一切割用原图，不用锐化后的
+    var sharpen = parseFloat(sharpenSel.value) || 0;
+    if (sharpen > 0) pixels = sharpenGrid(pixels, state.rows, state.cols, sharpen);
     var res = quantize(pixels, state.rows, state.cols, state.palette, ditherMode === "dither");
     var grid = res.grid, counts = res.counts;
     /* 颜色精简：先并掉零散单颗，再把相近的深浅色合成一种 */
     var lvl = SIMPLIFY[simplifySel.value];
     if (lvl){
       if (lvl.region){
-        grid = unifyRegions(grid, pixels, state.rows, state.cols, state.palette, lvl.region.tol, lvl.region.min);
+        grid = unifyRegions(grid, rawPixels, state.rows, state.cols, state.palette, lvl.region.tol, lvl.region.min);
         counts = recountGrid(grid, state.palette.length);
       }
       if (lvl.passes){
