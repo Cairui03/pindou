@@ -302,6 +302,7 @@
       <div class="controls">
         <label>放大 <input type="range" id="zoom" min="0.2" max="4" step="0.1" value="1" style="width:120px;"></label>
         <label><input type="checkbox" id="previewGrid" checked> 网格</label>
+        <label><input type="checkbox" id="previewCodes"> 色号</label>
         <button class="small" id="fitBtn">适应窗口</button>
         <span style="color:var(--muted); font-size:13px;" id="gridInfo"></span>
       </div>
@@ -356,6 +357,15 @@
         <option value="name">颜色名称</option>
       </select>
     </div>
+    <div class="row">
+      <label>图纸每格显示</label>
+      <select id="cellCodes" style="flex:0 1 240px;">
+        <option value="none" selected>不显示（纯色块）</option>
+        <option value="name">色号名称（如 A14）</option>
+        <option value="idx">色号编号（1、2、3…）</option>
+      </select>
+    </div>
+    <p class="hint">选了「色号名称」后，导出的高清图纸会在每格中央印上色号，照着摆豆不用来回比对颜色；每格 16px 以下会看不清，建议 24px 以上。</p>
     <div class="export-btns" style="margin-top:12px;">
       <button class="primary" id="shareBtn">分享 / 存到相册</button>
       <button id="exportPixel">精确像素图 PNG</button>
@@ -387,7 +397,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v3</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v4</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -534,6 +544,13 @@ function cellText(idx, palette, mode){
   if (mode === "idx") return String(idx + 1);
   if (mode === "name") return p.name || p.hex;
   return p.hex;
+}
+/* 图纸格子里印的短色号：编号 或 色卡名（如 A14） */
+function cellCode(idx, palette, mode){
+  if (idx === null || idx === undefined || !mode) return "";
+  var p = palette[idx];
+  if (!p) return "";
+  return mode === "idx" ? String(idx + 1) : (p.name || "");
 }
 function gridToCSV(grid, palette, mode){
   var lines = [];
@@ -814,12 +831,14 @@ document.addEventListener("DOMContentLoaded", function(){
       convertBtn = $("convertBtn"),
       previewWrap = $("previewWrap"), canvasSizer = $("canvasSizer"), previewCanvas = $("previewCanvas"),
       previewPlaceholder = $("previewPlaceholder"), zoom = $("zoom"), previewGridChk = $("previewGrid"),
+      previewCodesChk = $("previewCodes"),
       fitBtn = $("fitBtn"), gridInfo = $("gridInfo"),
       toolBtns = [$("toolView"), $("toolPen"), $("toolErase")], undoBtn = $("undoBtn"), clearBtn = $("clearBtn"),
       brushSwatch = $("brushSwatch"), brushName = $("brushName"),
       countsBox = $("counts"),
       pixelScale = $("pixelScale"), sheetCellPx = $("sheetCellPx"), exportGridChk = $("exportGrid"),
       exportLabelsChk = $("exportLabels"), fillEmptyChk = $("fillEmpty"), csvMode = $("csvMode"),
+      cellCodesSel = $("cellCodes"),
       shareBtn = $("shareBtn"), exportPixelBtn = $("exportPixel"), exportSheetBtn = $("exportSheet"),
       exportCsvBtn = $("exportCsv"), exportJsonBtn = $("exportJson"), exportCountsBtn = $("exportCounts"),
       exportResult = $("exportResult"), exportImg = $("exportImg"), exportLink = $("exportLink"), exportTip = $("exportTip"),
@@ -1197,7 +1216,19 @@ document.addEventListener("DOMContentLoaded", function(){
 
   /* ---------------- 预览与绘制 ---------------- */
   function previewCell(){
-    return Math.max(3, Math.min(20, Math.round(520 / Math.max(state.cols, state.rows))));
+    var n = Math.max(state.cols, state.rows);
+    /* 要印色号就得给文字留出格子，自动放大每格 */
+    if (previewCodesChk.checked) return Math.max(9, Math.min(22, Math.round(2200 / n)));
+    return Math.max(3, Math.min(20, Math.round(520 / n)));
+  }
+  /* 预览里印什么：色卡名都比较短（如 A14）就用名字，否则用编号 */
+  function autoCodeMode(){
+    var maxLen = 0;
+    for (var i = 0; i < state.palette.length; i++){
+      var n = (state.palette[i].name || "").length;
+      if (n > maxLen) maxLen = n;
+    }
+    return maxLen <= 4 ? "name" : "idx";
   }
   function renderPreview(){
     if (!state.grid) return;
@@ -1211,7 +1242,9 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     var ctx = previewCanvas.getContext("2d");
     ctx.clearRect(0, 0, w, h);
-    drawGridToCtx(ctx, state.grid, state.palette, cell, previewGridChk.checked, false, false);
+    /* 画笔拖动过程中不印色号（重新排版文字很费时），松手后再补上 */
+    var codeMode = (previewCodesChk.checked && !painting) ? autoCodeMode() : null;
+    drawGridToCtx(ctx, state.grid, state.palette, cell, previewGridChk.checked, false, false, codeMode);
     applyZoom();
   }
   function scheduleRender(){
@@ -1220,7 +1253,8 @@ document.addEventListener("DOMContentLoaded", function(){
     var raf = window.requestAnimationFrame || function(fn){ return setTimeout(fn, 16); };
     raf(function(){ renderPending = false; renderPreview(); });
   }
-  function drawGridToCtx(ctx, grid, palette, cellPx, showGrid, labels, whiteEmpty){
+  /* codeMode 非空时，每格中央印上色号（"name" 用色卡名如 A14，"idx" 用编号） */
+  function drawGridToCtx(ctx, grid, palette, cellPx, showGrid, labels, whiteEmpty, codeMode){
     var rows = grid.length, cols = grid[0].length;
     var labelW = 0, labelH = 0, fontSize = 11;
     if (labels){
@@ -1233,6 +1267,30 @@ document.addEventListener("DOMContentLoaded", function(){
       for (var c = 0; c < cols; c++) ctx.fillText(colLabel(c), labelW + c * cellPx + cellPx / 2, labelH / 2);
       ctx.textAlign = "right";
       for (var r = 0; r < rows; r++) ctx.fillText(String(r + 1), labelW - 6, labelH + r * cellPx + cellPx / 2);
+    }
+    /* 色号文字：先量出每个色号的实际宽度（中英混排宽度差别很大），再定字号，
+       保证每个色号都完整装在格子里不压边 */
+    var CODE_FONT = 'px -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif';
+    var codeFonts = null, codeBaseFs = 0, kk, lastCodeFs = -1;
+    if (codeMode){
+      codeBaseFs = Math.max(5, Math.min(cellPx * 0.6, 34));
+      ctx.font = "600 " + codeBaseFs.toFixed(1) + CODE_FONT;
+      var seen = {};
+      for (var yy = 0; yy < rows; yy++){
+        for (var xx = 0; xx < cols; xx++){
+          var t0 = cellCode(grid[yy][xx], palette, codeMode);
+          if (t0) seen[t0] = 1;
+        }
+      }
+      codeFonts = {};
+      var limitW = cellPx * 0.84;
+      for (kk in seen){
+        var wpx = ctx.measureText(kk).width;
+        codeFonts[kk] = wpx > limitW ? Math.max(4, codeBaseFs * limitW / wpx) : codeBaseFs;
+      }
+      ctx.font = "600 " + codeBaseFs.toFixed(1) + CODE_FONT;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
     }
     for (var y = 0; y < rows; y++){
       for (var x = 0; x < cols; x++){
@@ -1249,6 +1307,19 @@ document.addEventListener("DOMContentLoaded", function(){
         }
         ctx.fillStyle = palette[idx].hex;
         ctx.fillRect(labelW + x * cellPx, labelH + y * cellPx, cellPx, cellPx);
+        if (codeMode){
+          var txt = cellCode(idx, palette, codeMode);
+          if (txt){
+            var wantFs = codeFonts[txt] || codeBaseFs;
+            if (wantFs !== lastCodeFs){
+              ctx.font = "600 " + wantFs.toFixed(1) + CODE_FONT;
+              lastCodeFs = wantFs;
+            }
+            var cc = palette[idx].rgb;
+            ctx.fillStyle = srgbLuma(cc[0], cc[1], cc[2]) > 145 ? "#1C1C1C" : "#FFFFFF";
+            ctx.fillText(txt, labelW + x * cellPx + cellPx / 2, labelH + y * cellPx + cellPx / 2 + cellPx * 0.03);
+          }
+        }
       }
     }
     if (showGrid){
@@ -1286,6 +1357,11 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   zoom.addEventListener("input", applyZoom);
   previewGridChk.addEventListener("change", renderPreview);
+  previewCodesChk.addEventListener("change", function(){
+    renderPreview();
+    fitZoom(true);
+    if (previewCodesChk.checked) toastMsg("预览已显示色号，放大就能看清");
+  });
   fitBtn.addEventListener("click", function(){ fitZoom(false); });
 
   function cellFromEvent(e){
@@ -1349,6 +1425,7 @@ document.addEventListener("DOMContentLoaded", function(){
     painting = false; lastCell = null;
     renderCounts();
     renderBrush();
+    scheduleRender();   // 松手后把色号补画回来
   }
   previewCanvas.addEventListener("pointerup", endPaint);
   previewCanvas.addEventListener("pointercancel", endPaint);
@@ -1497,7 +1574,8 @@ document.addEventListener("DOMContentLoaded", function(){
     var ctx = cv.getContext("2d");
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, cv.width, cv.height);
-    drawGridToCtx(ctx, state.grid, state.palette, cellPx, exportGridChk.checked, labels, false);
+    var codeMode = cellCodesSel.value === "none" ? null : cellCodesSel.value;
+    drawGridToCtx(ctx, state.grid, state.palette, cellPx, exportGridChk.checked, labels, false, codeMode);
     return cv;
   }
   function showResult(blob, filename, tip){
@@ -1534,9 +1612,19 @@ document.addEventListener("DOMContentLoaded", function(){
       '<b>iPad / iPhone：</b>长按下面这张图 →「存储到相册」；或点上面的「分享 / 存到相册」直接分享给拼豆 App。';
   }
   function tipSheet(){
-    return '<b>打印用图纸：</b>带网格和行列坐标，打印出来照着摆豆；空豆（不拼的地方）用浅灰标出。<br>' +
+    var codes = cellCodesSel.value !== "none";
+    return (codes
+        ? '<b>带色号图纸：</b>每格都印上色号（' + (cellCodesSel.value === "idx" ? "编号" : "色名") + '），照着摆豆不用比对颜色，也不怕相近色看岔。<br>'
+        : '<b>打印用图纸：</b>带网格和行列坐标，打印出来照着摆豆；空豆（不拼的地方）用浅灰标出。<br>') +
       '<b>电脑：</b>右键另存，或点下面的下载按钮。';
   }
+  /* 选了色号就自动把每格调大一点，否则字看不清 */
+  cellCodesSel.addEventListener("change", function(){
+    if (cellCodesSel.value !== "none" && (parseInt(sheetCellPx.value, 10) || 16) < 24){
+      sheetCellPx.value = "24";
+      toastMsg("已把「图纸每格」调到 24px，色号才看得清");
+    }
+  });
   var TIP_FILE = '文件已开始下载，在浏览器的「下载」里就能找到；iPad / iPhone 会存到「文件」App 的下载文件夹。';
   var TIP_SHARE_FALLBACK =
     '<b>这台设备不支持直接分享文件。</b>长按下面这张图 →「存储到相册」，然后打开拼豆 App 从相册导入；' +
