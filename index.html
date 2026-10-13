@@ -242,7 +242,7 @@
 
       <span class="opt-label">豆子颜色（色板）</span>
       <select id="paletteSelect">
-        <option value="common256" selected>通用 256 色 · 超高精度</option>
+        <option value="common256" selected>通用 424 色 · 超高精度</option>
         <option value="common96">通用 96 色 · 层次细腻</option>
         <option value="common48">通用 48 色 · 兼容常见拼豆板</option>
         <option value="common24">通用 24 色 · 精简好买</option>
@@ -266,8 +266,9 @@
       <span class="opt-label">颜色匹配</span>
       <div class="radio-group">
         <label><input type="radio" name="dither" value="smooth" checked> 平滑 · 色块干净</label>
-        <label><input type="radio" name="dither" value="dither"> 抖动 · 细节更多</label>
+        <label><input type="radio" name="dither" value="dither"> 抖动 · 渐变细腻</label>
       </div>
+      <p class="hint">平滑：颜色最准、色块最干净，卡通 / 贴纸 / 表情包首选。抖动：靠细小颗粒堆出更顺的渐变，适合照片和渐变背景，凑近看会有颗粒感（这是正常的，不是噪点）。</p>
       <span class="opt-label">图片怎么放进板子</span>
       <div class="radio-group">
         <label><input type="radio" name="fit" value="cover" checked> 裁切铺满</label>
@@ -471,6 +472,9 @@ function quantize(pixels, rows, cols, palette, dither){
     grid.push(row);
   }
   if (dither){
+    /* 误差阻尼：全量扩散会把颗粒抖得很粗（浅色区尤其明显），
+       折掉一部分误差，渐变照样平滑，但颗粒细很多。 */
+    var DAMP = 0.72;
     var buf = new Array(rows);
     for (i = 0; i < rows; i++){
       buf[i] = new Array(cols);
@@ -485,6 +489,7 @@ function quantize(pixels, rows, cols, palette, dither){
         if (!old){ grid[i][j] = null; continue; }
         var k = matchColor(old[0], old[1], old[2], palette);
         var err = [old[0]-palette[k].rgb[0], old[1]-palette[k].rgb[1], old[2]-palette[k].rgb[2]];
+        err[0] *= DAMP; err[1] *= DAMP; err[2] *= DAMP;
         grid[i][j] = k;
         if (j + 1 < cols) addErr(buf[i][j+1], err, 7/16);
         if (i + 1 < rows){
@@ -505,7 +510,10 @@ function quantize(pixels, rows, cols, palette, dither){
 }
 function addErr(px, err, k){
   if (!px) return;
-  px[0] += err[0]*k; px[1] += err[1]*k; px[2] += err[2]*k;
+  /* 钳到 0~255：不钳的话误差会越滚越大，浅色区就会被推出一堆白点 */
+  px[0] = clamp255(px[0] + err[0]*k);
+  px[1] = clamp255(px[1] + err[1]*k);
+  px[2] = clamp255(px[2] + err[2]*k);
 }
 /* 列标注：0->A 25->Z 26->AA */
 function colLabel(i){
@@ -629,37 +637,65 @@ var HUE5 = [
   "靛蓝","靛蓝","靛蓝","靛蓝","紫","紫","紫","紫罗兰","紫罗兰","紫","紫","紫","紫红","紫红",
   "玫红","玫红","玫红","玫红","桃红","桃红","樱红","樱红","樱红","樱红","樱红","樱红","红","红"
 ];
-function build256Palette(){
+/*
+ * 通用大色板
+ * 结构：灰阶 16 + 低饱和灰调 12 + 肤色/棕 12 + 色相 48 × 8 档 = 424
+ *
+ * 48 个色相（7.5° 一档）× 8 档「明度 × 饱和度」组合，这 8 档是在 Lab 色差空间里
+ * 用搜索程序调出来的（见 work/optimize/tiers.js），目标是让整块色板离真实图片
+ * 颜色的距离最小。相比原来只有深/中/淡三档的色板，平均色差几乎减半。
+ *
+ * 这件事很关键：色板够不着某个颜色时，平滑模式会硬拉到最近的饱和色或灰白上
+ * （浅蓝背景被配成深蓝），抖动模式则会拿白色去掺（满屏白点）。两件事同源。
+ */
+function buildMainPalette(){
   var list = [];
+  var used = {};
   var gray = [
     ["白","#FFFFFF"],["暖白","#F9F7F2"],["米白","#F2EFE6"],["浅灰白","#E8E8E2"],
     ["极浅灰","#DADAD4"],["浅灰","#CBCBC4"],["中浅灰","#BABAB2"],["灰","#A8A8A0"],
     ["中灰","#94948C"],["深灰","#808078"],["暗灰","#6A6A64"],["炭灰","#525250"],
     ["深炭","#3C3C3A"],["墨灰","#2A2A28"],["近黑","#1A1A19"],["黑","#0A0A0A"]
   ];
-  var skin = [
-    ["樱花肤","#FDE8D0"],["浅肤","#F7DDC0"],["肤色","#F2C9A0"],["暖肤","#EBB98C"],
-    ["深肤","#E8B48A"],["小麦","#D9A06E"],["浅棕","#B08754"],["棕","#8A5A30"],
-    ["深棕","#5E3B1E"],["咖啡","#4A2F18"],["巧克力","#6B4423"],["摩卡","#8C6E52"],
-    ["驼色","#B08A5A"],["卡其","#C8B27A"],["米色","#E8D8B8"],["沙色","#D9C09A"]
+  var muted = [
+    ["灰蓝","#7A8AA8"],["雾蓝","#9FB4C8"],["钢蓝","#607090"],["青灰","#8AA8A0"],
+    ["鼠尾草","#A8B8A0"],["豆绿","#9FB890"],["橄榄","#8A8A5A"],["藕荷","#C8B8C8"],
+    ["烟灰紫","#9A8CB8"],["灰粉","#D8B8B8"],["米咖","#B0A090"],["砖灰","#A08878"]
   ];
-  var special = [
-    ["金","#D4AF37"],["铜","#B87333"],["银","#A8AEB8"],["青铜","#8C7853"],
-    ["玫瑰金","#B76E79"],["珍珠","#F0EAD6"],["青瓷","#96C8B0"],["古铜","#A0522D"]
+  var skin = [
+    ["浅肤","#F7DDC0"],["肤色","#F2C9A0"],["深肤","#E8B48A"],["小麦","#D9A06E"],
+    ["浅棕","#B08754"],["棕","#8A5A30"],["深棕","#5E3B1E"],["咖啡","#4A2F18"],
+    ["巧克力","#6B4423"],["驼色","#B08A5A"],["卡其","#C8B27A"],["米色","#E8D8B8"]
   ];
   gray.forEach(function(c){ list.push(c); });
+  muted.forEach(function(c){ list.push(c); });
   skin.forEach(function(c){ list.push(c); });
-  for (var i = 0; i < 72; i++){
-    var h = i * 5, base = HUE5[i];
-    var rgb = hslToRgb(h, 0.85, 0.5);  list.push(["艳" + base, rgbToHex(rgb[0], rgb[1], rgb[2])]);
-    rgb = hslToRgb(h, 0.85, 0.68);     list.push(["浅艳" + base, rgbToHex(rgb[0], rgb[1], rgb[2])]);
-    rgb = hslToRgb(h, 0.45, 0.62);     list.push(["柔" + base, rgbToHex(rgb[0], rgb[1], rgb[2])]);
+  /* 色相 48 档（7.5° 一档）× 8 个明度/饱和度档：[饱和度, 明度, 命名前缀] */
+  var TONES = [
+    [0.50, 0.36, "深"],
+    [0.68, 0.52, "中"],
+    [0.53, 0.54, "柔"],
+    [0.89, 0.55, "正"],
+    [0.78, 0.73, "亮"],
+    [0.64, 0.75, "浅"],
+    [0.49, 0.79, "极浅"],
+    [0.86, 0.93, "淡"]
+  ];
+  var HUES = 48;
+  for (var i = 0; i < HUES; i++){
+    var h = i * (360 / HUES);
+    var base = HUE5[Math.round(h / 5) % 72];
+    for (var t = 0; t < TONES.length; t++){
+      var rgb = hslToRgb(h, TONES[t][0], TONES[t][1]);
+      var name = TONES[t][2] + base;
+      if (used[name]) { used[name]++; name = name + used[name]; } else { used[name] = 1; }
+      list.push([name, rgbToHex(rgb[0], rgb[1], rgb[2])]);
+    }
   }
-  special.forEach(function(c){ list.push(c); });
   return makePalette(list);
 }
 var PALETTES = {
-  common256: build256Palette(),
+  common256: buildMainPalette(),
   common96: makePalette([
     ["白","#FFFFFF"],["暖白","#F9F5EC"],["米白","#F2EBDD"],["浅灰","#D9D9D9"],
     ["中灰","#BFBFBF"],["灰","#A6A6A6"],["深灰","#8C8C8C"],["炭灰","#595959"],
@@ -1559,3 +1595,4 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 </body>
 </html>
+
