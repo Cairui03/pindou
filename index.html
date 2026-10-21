@@ -415,7 +415,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v6</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v7</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -578,6 +578,68 @@ function sharpenGrid(pixels, rows, cols, amount){
   return out;
 }
 
+/*
+ * 色噪清理：把每格颜色拆成「亮度 Y + 色度 Cb/Cr」，只对色度做 3×3 中值。
+ * 亮度（五官、轮廓、明暗）一格都不动，专治：
+ *   - 灰/白区域里零星冒出粉点、绿点、蓝点
+ *   - 黑发、暗部里冒出不相干的彩色
+ * 这些都不是原图里的东西，是照片压缩噪点被色板"放大"成了完全不同色相。
+ */
+function denoiseChroma(pixels, rows, cols, radius){
+  radius = radius || 1;
+  var n = rows * cols, x, y, o;
+  var Y = new Float32Array(n), Cb = new Float32Array(n), Cr = new Float32Array(n), ok = new Uint8Array(n);
+  for (y = 0; y < rows; y++){
+    for (x = 0; x < cols; x++){
+      var p = pixels[y][x];
+      o = y * cols + x;
+      if (!p) continue;
+      ok[o] = 1;
+      Y[o] = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+      Cb[o] = 128 - 0.168736 * p[0] - 0.331264 * p[1] + 0.5 * p[2];
+      Cr[o] = 128 + 0.5 * p[0] - 0.418688 * p[1] - 0.081312 * p[2];
+    }
+  }
+  var nCb = new Float32Array(n), nCr = new Float32Array(n);
+  var bufB = [], bufR = [], dy, dx, k;
+  for (y = 0; y < rows; y++){
+    for (x = 0; x < cols; x++){
+      o = y * cols + x;
+      if (!ok[o]) continue;
+      bufB.length = 0; bufR.length = 0;
+      for (dy = -radius; dy <= radius; dy++){
+        for (dx = -radius; dx <= radius; dx++){
+          var ny = y + dy, nx = x + dx;
+          if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
+          var q = ny * cols + nx;
+          if (!ok[q]) continue;
+          bufB.push(Cb[q]); bufR.push(Cr[q]);
+        }
+      }
+      bufB.sort(function(a, b){ return a - b; });
+      bufR.sort(function(a, b){ return a - b; });
+      nCb[o] = bufB[bufB.length >> 1];
+      nCr[o] = bufR[bufR.length >> 1];
+    }
+  }
+  var out = [];
+  for (y = 0; y < rows; y++){
+    var row = new Array(cols);
+    for (x = 0; x < cols; x++){
+      o = y * cols + x;
+      if (!ok[o]){ row[x] = null; continue; }
+      var yy = Y[o], cb = nCb[o] - 128, cr = nCr[o] - 128;
+      row[x] = [
+        clamp255(yy + 1.402 * cr),
+        clamp255(yy - 0.344136 * cb - 0.714136 * cr),
+        clamp255(yy + 1.772 * cb)
+      ];
+    }
+    out.push(row);
+  }
+  return out;
+}
+
 /* 重新统计每色用量 */
 function recountGrid(grid, paletteLen){
   var counts = new Array(paletteLen).fill(0);
@@ -658,7 +720,7 @@ function mergeSimilarColors(grid, counts, palette, thresh){
  * 每块区域取平均色，重新配一个最接近的色板色，整块统一。
  * 太小的区域（细节、描边、抗锯齿过渡）不动。
  */
-function unifyRegions(grid, pixels, rows, cols, palette, tol, minCells){
+function unifyRegions(grid, pixels, rows, cols, palette, tol, minCells, maxSpread){
   var n = rows * cols, seen = new Uint8Array(n), i, k;
   var out = grid.map(function(r){ return r.slice(); });
   var lab = new Array(n);
@@ -699,6 +761,20 @@ function unifyRegions(grid, pixels, rows, cols, palette, tol, minCells){
       sr += pc[0]; sg += pc[1]; sb += pc[2]; cnt++;
     }
     if (!cnt) continue;
+    /* 只有"真正均匀"的块才统一：如果块内本身有明暗过渡（照片的立体感），
+       强行压成一个颜色会把形体和光影全抹掉，那就跳过。
+       用 90% 分位而不是最大值——容得下少数几颗离群色，但整片渐变仍会判为不均匀。 */
+    if (maxSpread){
+      var mr = sr / cnt, mg = sg / cnt, mb = sb / cnt;
+      var meanLab = srgbToLab(mr, mg, mb), spread = 0;
+      var dists = [];
+      for (i = 0; i < members.length; i++){
+        dists.push(Math.sqrt(labDist(lab[members[i]], meanLab)));
+      }
+      dists.sort(function(a, b){ return a - b; });
+      spread = dists[Math.min(dists.length - 1, Math.floor(dists.length * 0.9))];
+      if (spread > maxSpread) continue;
+    }
     var idx = matchColor(sr / cnt, sg / cnt, sb / cnt, palette);
     for (i = 0; i < members.length; i++){
       out[Math.floor(members[i] / cols)][members[i] % cols] = idx;
@@ -1044,8 +1120,8 @@ document.addEventListener("DOMContentLoaded", function(){
   var SIMPLIFY = {
     "0": null,
     "1": { passes: 1, merge: 4 },
-    "2": { passes: 2, merge: 9, region: { tol: 10, min: 8 } },
-    "3": { passes: 3, merge: 13, region: { tol: 14, min: 5 } }
+    "2": { passes: 2, merge: 9, region: { tol: 10, min: 8, spread: 4 } },
+    "3": { passes: 3, merge: 13, region: { tol: 14, min: 5, spread: 7 } }
   };
   var autoTimer = null, needsFit = true, renderPending = false;
 
@@ -1358,6 +1434,11 @@ document.addEventListener("DOMContentLoaded", function(){
     var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
     var pixels = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt);
     var rawPixels = pixels;                       // 区域统一切割用原图，不用锐化后的
+    if (simplifySel.value !== "0"){
+      /* 轻度用 3×3，中/强力用 5×5：窗口越大，成片的色噪压得越干净 */
+      var chromaR = (simplifySel.value === "2" || simplifySel.value === "3") ? 2 : 1;
+      pixels = denoiseChroma(pixels, state.rows, state.cols, chromaR);
+    }
     var sharpen = parseFloat(sharpenSel.value) || 0;
     if (sharpen > 0) pixels = sharpenGrid(pixels, state.rows, state.cols, sharpen);
     var res = quantize(pixels, state.rows, state.cols, state.palette, ditherMode === "dither");
@@ -1366,7 +1447,8 @@ document.addEventListener("DOMContentLoaded", function(){
     var lvl = SIMPLIFY[simplifySel.value];
     if (lvl){
       if (lvl.region){
-        grid = unifyRegions(grid, rawPixels, state.rows, state.cols, state.palette, lvl.region.tol, lvl.region.min);
+        grid = unifyRegions(grid, rawPixels, state.rows, state.cols, state.palette,
+                            lvl.region.tol, lvl.region.min, lvl.region.spread);
         counts = recountGrid(grid, state.palette.length);
       }
       if (lvl.passes){
