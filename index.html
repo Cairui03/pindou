@@ -279,7 +279,7 @@
 
       <span class="opt-label">颜色精简（大色块里不再深浅不一）</span>
       <select id="simplify">
-        <option value="0">关闭 · 保留全部颜色</option>
+        <option value="0">关闭 · 不合并颜色（仍会降噪）</option>
         <option value="1">轻度 · 只去掉零散单颗</option>
         <option value="2" selected>中度 · 合并相近深浅色（推荐）</option>
         <option value="3">强力 · 大片平涂，卡通首选</option>
@@ -415,7 +415,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v8</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v9</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -551,29 +551,52 @@ function addErr(px, err, k){
  * 就糊在一起。先让边缘在量化前立起来，最后出来的豆图会清晰很多。
  */
 function sharpenGrid(pixels, rows, cols, amount){
-  var out = [], y, x;
-  for (y = 0; y < rows; y++) out.push(new Array(cols));
+  var n = rows * cols, y, x, o;
+  var Y = new Float32Array(n), Cb = new Float32Array(n), Cr = new Float32Array(n), ok = new Uint8Array(n);
   for (y = 0; y < rows; y++){
     for (x = 0; x < cols; x++){
-      var p = pixels[y][x];
-      if (!p){ out[y][x] = null; continue; }
-      var sr = 0, sg = 0, sb = 0, n = 0, dy, dx;
+      var pp = pixels[y][x];
+      o = y * cols + x;
+      if (!pp) continue;
+      ok[o] = 1;
+      Y[o] = 0.299 * pp[0] + 0.587 * pp[1] + 0.114 * pp[2];
+      Cb[o] = 128 - 0.168736 * pp[0] - 0.331264 * pp[1] + 0.5 * pp[2];
+      Cr[o] = 128 + 0.5 * pp[0] - 0.418688 * pp[1] - 0.081312 * pp[2];
+    }
+  }
+  /* 只锐化亮度：色度保持降噪后的值，避免在边缘重新造出彩色光晕 */
+  var Y2 = new Float32Array(n);
+  for (y = 0; y < rows; y++){
+    for (x = 0; x < cols; x++){
+      o = y * cols + x;
+      if (!ok[o]) continue;
+      var sum = 0, cnt = 0, dy, dx;
       for (dy = -1; dy <= 1; dy++){
         for (dx = -1; dx <= 1; dx++){
           var ny = y + dy, nx = x + dx;
           if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
-          var q = pixels[ny][nx];
-          if (!q) continue;
-          sr += q[0]; sg += q[1]; sb += q[2]; n++;
+          var q = ny * cols + nx;
+          if (!ok[q]) continue;
+          sum += Y[q]; cnt++;
         }
       }
-      if (!n){ out[y][x] = [p[0], p[1], p[2]]; continue; }
-      out[y][x] = [
-        clamp255(p[0] + amount * (p[0] - sr / n)),
-        clamp255(p[1] + amount * (p[1] - sg / n)),
-        clamp255(p[2] + amount * (p[2] - sb / n))
+      Y2[o] = cnt ? clamp255(Y[o] + amount * (Y[o] - sum / cnt)) : Y[o];
+    }
+  }
+  var out = [];
+  for (y = 0; y < rows; y++){
+    var row = new Array(cols);
+    for (x = 0; x < cols; x++){
+      o = y * cols + x;
+      if (!ok[o]){ row[x] = null; continue; }
+      var yy = Y2[o], cb = Cb[o] - 128, cr = Cr[o] - 128;
+      row[x] = [
+        clamp255(yy + 1.402 * cr),
+        clamp255(yy - 0.344136 * cb - 0.714136 * cr),
+        clamp255(yy + 1.772 * cb)
       ];
     }
+    out.push(row);
   }
   return out;
 }
@@ -707,12 +730,36 @@ function mergeSimilarColors(grid, counts, palette, thresh){
     var doMerge = false;
     if (target >= 0){
       if (bestD <= thresh) doMerge = true;
-      else {
-        /* 色相离群：明度和某个主色几乎一样，只是色相跑偏，而且用量只有它的零头。
-           典型就是暖灰皮肤里那几块偏紫的同亮度格子 —— 人不该在那儿看到紫色。 */
-        var dL = Math.abs(palette[idx].lab[0] - palette[target].lab[0]);
-        if (dL <= 8 && counts[target] >= counts[idx] * 8) doMerge = true;
-      }
+    }
+    if (doMerge) map[idx] = target;
+    else { kept.push(idx); map[idx] = idx; }
+  }
+  return grid.map(function(row){
+    return row.map(function(v){ return v === null ? null : map[v]; });
+  });
+}
+
+/*
+ * 色相离群清理：只处理「明度和某个主色几乎一样、但色相跑偏、用量又只有零头」的颜色。
+ * 典型就是暖灰皮肤里那几块偏紫的同亮度格子——它和皮肤主色明度一样，只是色相不对，
+ * 换成人眼看就是"这儿怎么冒出一块紫的"。这类必须清掉，但它不是"合并相近色"，
+ * 所以任何精简档位（包括关闭）都要做。真正有明暗差别的颜色不受影响。
+ */
+function mergeHueOutliers(grid, counts, palette, maxDL, ratio, maxDE){
+  var used = [], i, k, q;
+  for (i = 0; i < counts.length; i++) if (counts[i] > 0) used.push(i);
+  used.sort(function(a, b){ return counts[b] - counts[a]; });
+  var map = {}, kept = [];
+  for (k = 0; k < used.length; k++){
+    var idx = used[k], target = -1, bestD = Infinity;
+    for (q = 0; q < kept.length; q++){
+      var d = Math.sqrt(labDist(palette[idx].lab, palette[kept[q]].lab));
+      if (d < bestD){ bestD = d; target = kept[q]; }
+    }
+    var doMerge = false;
+    if (target >= 0 && bestD <= maxDE){
+      var dL = Math.abs(palette[idx].lab[0] - palette[target].lab[0]);
+      if (dL <= maxDL && counts[target] >= counts[idx] * ratio) doMerge = true;
     }
     if (doMerge) map[idx] = target;
     else { kept.push(idx); map[idx] = idx; }
@@ -1444,15 +1491,20 @@ document.addEventListener("DOMContentLoaded", function(){
     var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
     var pixels = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt);
     var rawPixels = pixels;                       // 区域统一切割用原图，不用锐化后的
-    if (simplifySel.value !== "0"){
-      /* 轻度用 3×3，中/强力用 5×5：窗口越大，成片的色噪压得越干净 */
-      var chromaR = (simplifySel.value === "2" || simplifySel.value === "3") ? 2 : 1;
-      pixels = denoiseChroma(pixels, state.rows, state.cols, chromaR);
-    }
+    /* 色噪清理常开：它只压色度噪点，不合并颜色，所以和"颜色精简"互不影响。
+       精简档位越大，降噪窗口也越大（中/强力用 5×5）。 */
+    var chromaR = (simplifySel.value === "2" || simplifySel.value === "3") ? 2 : 1;
+    pixels = denoiseChroma(pixels, state.rows, state.cols, chromaR);
     var sharpen = parseFloat(sharpenSel.value) || 0;
     if (sharpen > 0) pixels = sharpenGrid(pixels, state.rows, state.cols, sharpen);
     var res = quantize(pixels, state.rows, state.cols, state.palette, ditherMode === "dither");
     var grid = res.grid, counts = res.counts;
+    /* 孤立单颗也一律清掉（有线连着的、成小团的细节都保留） */
+    grid = despeckleGrid(grid, state.rows, state.cols, 1);
+    counts = recountGrid(grid, state.palette.length);
+    /* 同亮度但色相跑偏的少量离群色，任何档位都并回主色（不改明暗层次） */
+    grid = mergeHueOutliers(grid, counts, state.palette, 8, 8, 26);
+    counts = recountGrid(grid, state.palette.length);
     /* 颜色精简：先并掉零散单颗，再把相近的深浅色合成一种 */
     var lvl = SIMPLIFY[simplifySel.value];
     if (lvl){
