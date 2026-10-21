@@ -371,7 +371,7 @@
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportGrid" checked> 图纸网格</label>
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportLabels" checked> 行列坐标</label>
       <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="fillEmpty" checked> 空豆填白</label>
-      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="codeSkipBg" checked> 背景格不标色号</label>
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="codeSkipBg"> 背景格不标色号</label>
     </div>
     <div class="row">
       <label>色号表内容</label>
@@ -390,6 +390,7 @@
       </select>
     </div>
     <p class="hint">选了「色号名称」后，导出的高清图纸会在每格中央印上色号，照着摆豆不用来回比对颜色；每格 16px 以下会看不清，建议 24px 以上。</p>
+    <p class="hint" style="margin-top:-4px;">「背景格不标色号」只影响印刷观感：勾上后，连成一整片的大背景不再重复印同一个号，图更清爽；要让每一格都有号（方便别的软件识别），保持不勾即可。</p>
     <div class="export-btns" style="margin-top:12px;">
       <button class="primary" id="shareBtn">分享 / 存到相册</button>
       <button id="exportPixel">精确像素图 PNG</button>
@@ -421,7 +422,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v13</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v14</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
