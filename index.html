@@ -415,7 +415,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v7</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v8</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -704,7 +704,17 @@ function mergeSimilarColors(grid, counts, palette, thresh){
       var d = Math.sqrt(labDist(palette[idx].lab, palette[kept[q]].lab));
       if (d < bestD){ bestD = d; target = kept[q]; }
     }
-    if (target >= 0 && bestD <= thresh) map[idx] = target;
+    var doMerge = false;
+    if (target >= 0){
+      if (bestD <= thresh) doMerge = true;
+      else {
+        /* 色相离群：明度和某个主色几乎一样，只是色相跑偏，而且用量只有它的零头。
+           典型就是暖灰皮肤里那几块偏紫的同亮度格子 —— 人不该在那儿看到紫色。 */
+        var dL = Math.abs(palette[idx].lab[0] - palette[target].lab[0]);
+        if (dL <= 8 && counts[target] >= counts[idx] * 8) doMerge = true;
+      }
+    }
+    if (doMerge) map[idx] = target;
     else { kept.push(idx); map[idx] = idx; }
   }
   return grid.map(function(row){
@@ -1120,7 +1130,7 @@ document.addEventListener("DOMContentLoaded", function(){
   var SIMPLIFY = {
     "0": null,
     "1": { passes: 1, merge: 4 },
-    "2": { passes: 2, merge: 9, region: { tol: 10, min: 8, spread: 4 } },
+    "2": { passes: 2, merge: 12, region: { tol: 10, min: 8, spread: 4 } },
     "3": { passes: 3, merge: 13, region: { tol: 14, min: 5, spread: 7 } }
   };
   var autoTimer = null, needsFit = true, renderPending = false;
