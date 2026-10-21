@@ -279,9 +279,9 @@
 
       <span class="opt-label">颜色精简（大色块里不再深浅不一）</span>
       <select id="simplify">
-        <option value="0">关闭 · 不合并颜色（仍会降噪）</option>
-        <option value="1">轻度 · 只去掉零散单颗</option>
-        <option value="2" selected>中度 · 合并相近深浅色（推荐）</option>
+        <option value="0">关闭 · 只降噪，保留全部颜色</option>
+        <option value="1" selected>轻度 · 均匀色块平涂（推荐）</option>
+        <option value="2">中度 · 合并相近深浅色</option>
         <option value="3">强力 · 大片平涂，卡通首选</option>
       </select>
 
@@ -415,7 +415,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v9</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v10</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1176,9 +1176,9 @@ document.addEventListener("DOMContentLoaded", function(){
      region = 区域统一的容差与最小格数（把被劈成两色的整片区域并回一色） */
   var SIMPLIFY = {
     "0": null,
-    "1": { passes: 1, merge: 4 },
-    "2": { passes: 2, merge: 12, region: { tol: 10, min: 8, spread: 4 } },
-    "3": { passes: 3, merge: 13, region: { tol: 14, min: 5, spread: 7 } }
+    "1": { merge: 6 },
+    "2": { passes: 2, merge: 10, region: { tol: 8, min: 10, spread: 3.5 } },
+    "3": { passes: 3, merge: 14, region: { tol: 14, min: 5, spread: 6 } }
   };
   var autoTimer = null, needsFit = true, renderPending = false;
 
