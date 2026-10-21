@@ -421,7 +421,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v11</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v12</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1463,6 +1463,13 @@ document.addEventListener("DOMContentLoaded", function(){
     var ctx = cv.getContext("2d");
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, W, H);
+    /* 像素画/贴纸本身就是"一格一色"，平滑插值会把相邻两格混成脏色。
+       只有大幅缩小（照片常见）才开平滑；轻微缩放用最近邻，保住原色。 */
+    var fitScale;
+    if (fit === "stretch") fitScale = Math.max(W / iw, H / ih);
+    else if (fit === "contain") fitScale = Math.min(W / iw, H / ih);
+    else fitScale = Math.max(W / iw, H / ih) * (userZoom || 1);
+    ctx.imageSmoothingEnabled = fitScale < 0.55;
     drawSmooth(ctx, img, iw, ih, W, H, fit, posX, posY, userZoom);
     var data = ctx.getImageData(0, 0, W, H).data;
     var avgs = [], picks = [];
@@ -1512,8 +1519,6 @@ document.addEventListener("DOMContentLoaded", function(){
       tc.drawImage(src, 0, 0, nw, nh);
       src = t; sw = nw; sh = nh;
     }
-    ctx.imageSmoothingEnabled = true;
-    if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
     if (fit === "stretch"){
       ctx.drawImage(src, 0, 0, W, H);
     } else if (fit === "contain"){
