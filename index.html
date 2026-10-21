@@ -276,6 +276,12 @@
         <label><input type="radio" name="fit" value="contain"> 完整留白</label>
         <label><input type="radio" name="fit" value="stretch"> 拉伸变形</label>
       </div>
+      <div class="hidden" id="cropBox" style="margin-top:6px;">
+        <p class="hint" style="margin:0 0 4px;">长图 / 宽图可以左右上下挑想要的那一段，也能放大裁一小块。</p>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">左右</label><input type="range" id="cropX" min="0" max="100" value="50"><span class="v" id="vCropX">50</span></div>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">上下</label><input type="range" id="cropY" min="0" max="100" value="50"><span class="v" id="vCropY">50</span></div>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">缩放</label><input type="range" id="cropZoom" min="100" max="300" value="100"><span class="v" id="vCropZoom">100%</span></div>
+      </div>
 
       <span class="opt-label">颜色精简（大色块里不再深浅不一）</span>
       <select id="simplify">
@@ -415,7 +421,7 @@
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v10</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v11</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1143,6 +1149,8 @@ document.addEventListener("DOMContentLoaded", function(){
       removeBgChk = $("removeBg"), bgThresh = $("bgThresh"), vBg = $("vBg"),
       simplifySel = $("simplify"),
       sharpenSel = $("sharpen"),
+      cropBox = $("cropBox"), cropX = $("cropX"), cropY = $("cropY"), cropZoom = $("cropZoom"),
+      vCropX = $("vCropX"), vCropY = $("vCropY"), vCropZoom = $("vCropZoom"),
       convertBtn = $("convertBtn"),
       previewWrap = $("previewWrap"), canvasSizer = $("canvasSizer"), previewCanvas = $("previewCanvas"),
       previewPlaceholder = $("previewPlaceholder"), zoom = $("zoom"), previewGridChk = $("previewGrid"),
@@ -1398,8 +1406,22 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   var fitRadios = document.querySelectorAll('input[name="fit"]');
   for (var fi = 0; fi < fitRadios.length; fi++){
-    fitRadios[fi].addEventListener("change", function(){ fitMode = this.value; autoConvert(); });
+    fitRadios[fi].addEventListener("change", function(){
+      fitMode = this.value;
+      cropBox.classList.toggle("hidden", fitMode !== "cover");
+      autoConvert();
+    });
   }
+  /* 裁切位置 / 缩放 */
+  function syncCropLabels(){
+    vCropX.textContent = cropX.value;
+    vCropY.textContent = cropY.value;
+    vCropZoom.textContent = cropZoom.value + "%";
+  }
+  [cropX, cropY, cropZoom].forEach(function(el){
+    el.addEventListener("input", function(){ syncCropLabels(); autoConvert(); });
+  });
+  syncCropLabels();
   function bindSlider(input, out, fn){
     input.addEventListener("input", function(){
       out.textContent = input.value;
@@ -1425,7 +1447,13 @@ document.addEventListener("DOMContentLoaded", function(){
   bgThresh.addEventListener("change", function(){ autoConvert(); });
 
   /* ---------------- 采样 + 量化 ---------------- */
-  function samplePixels(img, cols, rows, fit, adj, opt){
+  /*
+   * 采样：每格切成 S×S 个小采样点。
+   * 既算平均色（写实/平滑区的落点），也算"主色"（票数最多的那个颜色）。
+   * 边缘格子里 40% 是黑描边、60% 是皮肤时，取主色就得到黑——描边是硬的；
+   * 只取平均会得到灰糊糊的过渡色，这正是之前"边缘糊"的根源。
+   */
+  function samplePixels(img, cols, rows, fit, adj, opt, posX, posY, userZoom){
     var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     if (!iw || !ih) throw new Error("图片尺寸读取失败");
     var S = Math.max(1, Math.min(24, Math.floor(1536 / Math.max(cols, rows))));
@@ -1435,29 +1463,44 @@ document.addEventListener("DOMContentLoaded", function(){
     var ctx = cv.getContext("2d");
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, W, H);
-    drawSmooth(ctx, img, iw, ih, W, H, fit);
+    drawSmooth(ctx, img, iw, ih, W, H, fit, posX, posY, userZoom);
     var data = ctx.getImageData(0, 0, W, H).data;
-    var out = [];
+    var avgs = [], picks = [];
     for (var y = 0; y < rows; y++){
-      var row = new Array(cols);
+      var rowA = new Array(cols), rowP = new Array(cols);
       for (var x = 0; x < cols; x++){
         var sr = 0, sg = 0, sb = 0, n = 0, o;
+        var hist = {}, bestKey = null, bestN = 0;
         for (var py = y * S; py < y * S + S; py++){
           var base = py * W * 4;
           for (var px = x * S; px < x * S + S; px++){
             o = base + px * 4;
-            sr += data[o]; sg += data[o+1]; sb += data[o+2]; n++;
+            var rr = data[o], gg = data[o+1], bb = data[o+2];
+            sr += rr; sg += gg; sb += bb; n++;
+            var key = (rr >> 3) + "," + (gg >> 3) + "," + (bb >> 3);
+            var hh = hist[key];
+            if (!hh){ hh = hist[key] = { n: 0, r: 0, g: 0, b: 0 }; }
+            hh.n++; hh.r += rr; hh.g += gg; hh.b += bb;
+            if (hh.n > bestN){ bestN = hh.n; bestKey = key; }
           }
         }
-        var c = adjustColor([sr/n, sg/n, sb/n], adj);
-        row[x] = (opt.removeBg && srgbLuma(c[0], c[1], c[2]) >= opt.bgThresh) ? null : c;
+        var avg = [sr / n, sg / n, sb / n];
+        var dom = bestN ? hist[bestKey] : null;
+        var domShare = n ? bestN / n : 0;
+        var pick = (dom && domShare >= 0.35) ? [dom.r / dom.n, dom.g / dom.n, dom.b / dom.n] : avg;
+        var ca = adjustColor(avg, adj);
+        var cp = adjustColor(pick, adj);
+        var empty = opt.removeBg && srgbLuma(ca[0], ca[1], ca[2]) >= opt.bgThresh;
+        rowA[x] = empty ? null : ca;
+        rowP[x] = empty ? null : cp;
       }
-      out.push(row);
+      avgs.push(rowA);
+      picks.push(rowP);
     }
-    return out;
+    return { avg: avgs, pick: picks };
   }
   /* 大图先逐级折半再缩放，避免一次性缩小产生锯齿 */
-  function drawSmooth(ctx, img, iw, ih, W, H, fit){
+  function drawSmooth(ctx, img, iw, ih, W, H, fit, posX, posY, userZoom){
     var src = img, sw = iw, sh = ih, limit = Math.max(W, H) * 2;
     while (Math.max(sw, sh) > limit && Math.max(sw, sh) > 8){
       var nw = Math.max(1, Math.round(sw / 2)), nh = Math.max(1, Math.round(sh / 2));
@@ -1473,10 +1516,17 @@ document.addEventListener("DOMContentLoaded", function(){
     if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
     if (fit === "stretch"){
       ctx.drawImage(src, 0, 0, W, H);
+    } else if (fit === "contain"){
+      var s0 = Math.min(W / sw, H / sh);
+      var dw0 = sw * s0, dh0 = sh * s0;
+      ctx.drawImage(src, (W - dw0) / 2, (H - dh0) / 2, dw0, dh0);
     } else {
-      var s = (fit === "contain") ? Math.min(W / sw, H / sh) : Math.max(W / sw, H / sh);
+      /* 裁切铺满：允许用户平移 + 缩放，长图也能挑到想要的那一段 */
+      var s = Math.max(W / sw, H / sh) * (userZoom || 1);
       var dw = sw * s, dh = sh * s;
-      ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      var ox = (typeof posX === "number") ? (W - dw) * posX : (W - dw) / 2;
+      var oy = (typeof posY === "number") ? (H - dh) * posY : (H - dh) / 2;
+      ctx.drawImage(src, ox, oy, dw, dh);
     }
   }
 
@@ -1489,8 +1539,12 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     var adj = { bright: +adjBright.value, contrast: +adjContrast.value, sat: +adjSat.value };
     var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
-    var pixels = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt);
-    var rawPixels = pixels;                       // 区域统一切割用原图，不用锐化后的
+    var sampled = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt,
+                               parseInt(cropX.value, 10) / 100,
+                               parseInt(cropY.value, 10) / 100,
+                               (parseInt(cropZoom.value, 10) || 100) / 100);
+    var pixels = sampled.pick;
+    var rawPixels = sampled.avg;                  // 区域统一切割用真实平均色，不用锐化后的
     /* 色噪清理常开：它只压色度噪点，不合并颜色，所以和"颜色精简"互不影响。
        精简档位越大，降噪窗口也越大（中/强力用 5×5）。 */
     var chromaR = (simplifySel.value === "2" || simplifySel.value === "3") ? 2 : 1;
