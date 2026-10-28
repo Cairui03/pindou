@@ -242,9 +242,9 @@
 
       <span class="opt-label">豆子颜色（色板）</span>
       <select id="paletteSelect">
-        <option value="common256" selected>通用 424 色 · 超高精度</option>
+        <option value="common424" selected>通用 424 色 · 真实豆色（推荐）</option>
         <option value="dbk221">大嘴巴拼豆 221 色 · 现货色号</option>
-        <option value="common96">通用 96 色 · 层次细腻</option>
+        <option value="common96">通用 96 色 · 精简真实色</option>
         <option value="common48">通用 48 色 · 兼容常见拼豆板</option>
         <option value="common24">通用 24 色 · 精简好买</option>
         <option value="custom">我的自定义色卡</option>
@@ -269,7 +269,7 @@
         <label><input type="radio" name="dither" value="smooth" checked> 平滑 · 色块干净</label>
         <label><input type="radio" name="dither" value="dither"> 抖动 · 渐变细腻</label>
       </div>
-      <p class="hint">平滑：颜色最准、色块最干净，卡通 / 贴纸 / 表情包首选。抖动：靠细小颗粒堆出更顺的渐变，适合照片和渐变背景，凑近看会有颗粒感（这是正常的，不是噪点）。</p>
+      <p class="hint">平滑：按每格真实平均色匹配色卡，颜色最准、色块最干净，照片和卡通首选。抖动：用细颗粒拼出更顺的渐变，但会明显增加用色和颗粒感，拼豆一般不推荐；只在纯渐变背景上偶尔使用。</p>
       <span class="opt-label">图片怎么放进板子</span>
       <div class="radio-group">
         <label><input type="radio" name="fit" value="cover" checked> 裁切铺满</label>
@@ -283,22 +283,21 @@
         <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">缩放</label><input type="range" id="cropZoom" min="100" max="300" value="100"><span class="v" id="vCropZoom">100%</span></div>
       </div>
 
-      <span class="opt-label">颜色精简（大色块里不再深浅不一）</span>
+      <span class="opt-label">颜色精简（限制总用色数，买豆更省）</span>
       <select id="simplify">
-        <option value="0">关闭 · 只降噪，保留全部颜色</option>
-        <option value="1" selected>轻度 · 均匀色块平涂（推荐）</option>
-        <option value="2">中度 · 合并相近深浅色</option>
-        <option value="3">强力 · 大片平涂，卡通首选</option>
+        <option value="0" selected>关闭 · 最接近原图（推荐）</option>
+        <option value="96">轻度 · 最多 96 色</option>
+        <option value="48">中度 · 最多 48 色</option>
+        <option value="24">强力 · 最多 24 色</option>
       </select>
 
-      <span class="opt-label">细节增强（小尺寸板子更容易看清五官）</span>
+      <span class="opt-label">线条增强（粗描边 / 黑白线稿 / logo）</span>
       <select id="sharpen">
-        <option value="0">关闭 · 边缘柔和</option>
-        <option value="0.5">轻度</option>
-        <option value="0.9" selected>标准 · 推荐</option>
-        <option value="1.4">强力 · 描边更硬</option>
+        <option value="0" selected>关闭 · 照片推荐（最忠实原图）</option>
+        <option value="1">轻度 · 粗描边更清楚（卡通）</option>
+        <option value="2">标准 · 黑白线稿 / logo（细线也会加粗）</option>
       </select>
-      <p class="hint">52 / 78 这种小尺寸，每格要吃掉十几个源像素，边缘会被平均磨平、五官糊成一团。开「标准」会让五官和描边在量化前先立起来，明显更能看清；觉得边缘太硬就调回「轻度」或「关闭」。</p>
+      <p class="hint">照片默认关闭。卡通、表情包这类"大色块 + 硬描边"的图选「轻度」，能保住深色描边不被平均成灰边；黑白线稿 / logo 选「标准」，连很细的黑线也会尽量保留（代价是线条会变粗一点、色差略增）。照片请不要开，会多出黑边。</p>
 
       <span class="opt-label">亮度</span>
       <div class="slider-row"><input type="range" id="adjBright" min="-60" max="60" step="1" value="0"><span class="v" id="vBright">0</span></div>
@@ -418,725 +417,886 @@
       <li><span class="tag">色卡</span> 想严格对应你手上的豆子，就点「导入我手上的豆子色卡」，把你买的豆子的色号填进去；颜色越多渐变越顺，越少越好买。</li>
       <li><span class="tag">导入 App</span> 导出「精确像素图 PNG」→ 点「分享 / 存到相册」→ 分享菜单里选拼豆 App，或先存到相册，再在拼豆 App 里导入这张图。</li>
       <li><span class="tag">微调</span> 生成的豆图可直接用「画笔 / 橡皮擦」在预览区修改，改完再导出。</li>
+      <li><span class="tag">算法</span> 本次修复参考了 GitHub 上的高星开源项目：<a href="https://github.com/Zippland/perler-beads" target="_blank" rel="noopener">Zippland/perler-beads</a>（Oklab 距离）、<a href="https://github.com/LunarXuan/Pindo" target="_blank" rel="noopener">LunarXuan/Pindo</a>（线性光降采样、CIEDE2000）、<a href="https://github.com/zwhy149/bead-grid-studio" target="_blank" rel="noopener">zwhy149/bead-grid-studio</a>（Oklab 粗筛 + CIEDE2000 精排）、<a href="https://github.com/ImageOptim/libimagequant" target="_blank" rel="noopener">ImageOptim/libimagequant</a>（误差扩散阻尼）。色卡数据来自 MIT 许可的 <a href="https://github.com/maxcleme/beadcolors" target="_blank" rel="noopener">maxcleme/beadcolors</a>。</li>
     </ol>
   </section>
 </main>
 
-<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v14</span></footer>
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v15</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
-"use strict";
+/* 自动生成：node tools/build-palettes.mjs  — 请勿手改。 */
+/* 通用色卡的真实豆色数据来自 maxcleme/beadcolors (MIT License)，按 Oklab 距离聚类到 424/96/48/24 色。 */
+var PINDOU_PALETTES = {
+  "common424": [
+    ["黑","#000000"], ["白","#FAFBF5"], ["艳朱红","#BC0423"], ["艳草绿","#06B73C"], ["暗艳蓝紫","#0239A3"], ["紫","#AD92E9"],
+    ["亮橙黄","#FFA630"], ["深红","#4E0C1B"], ["暗草绿","#3A6436"], ["艳紫红","#9C32B2"], ["亮艳黄绿","#FDFF44"], ["艳红","#F92E83"],
+    ["亮青","#8AD5C9"], ["蓝","#0084B7"], ["亮艳草绿","#1EF942"], ["橙","#AC7F5D"], ["亮玫红","#FFA1C5"], ["艳橙","#FE630B"],
+    ["深灰天蓝","#0B3C43"], ["紫红","#704B6D"], ["亮艳黄绿2","#BCD122"], ["亮蓝","#52B4E0"], ["浅黄","#F6D993"], ["深灰","#141315"],
+    ["蓝紫","#5B55BD"], ["草绿","#008F53"], ["红","#DE7995"], ["黄绿","#9BAB5A"], ["艳玫红","#9E156B"], ["浅灰紫","#EADAFC"],
+    ["深蓝紫","#251B58"], ["灰玫红","#C2A3B7"], ["橙2","#8D5C3E"], ["紫2","#907ABB"], ["艳紫红2","#CB59B9"], ["暗紫","#5F2D91"],
+    ["浅草绿","#7CEE9D"], ["青绿","#25B88C"], ["艳玫红2","#C63578"], ["灰朱红","#5A3E36"], ["蓝2","#00649A"], ["艳紫红3","#E987EA"],
+    ["暗朱红","#8D2A0F"], ["灰青绿","#668575"], ["艳橙2","#D14803"], ["浅青","#BCF9F6"], ["暗红","#730037"], ["亮橙","#D7996A"],
+    ["亮橙2","#E5BE9E"], ["浅黄绿","#E2FFB3"], ["暗蓝紫","#314174"], ["黄绿2","#696E31"], ["亮蓝2","#A9CBF1"], ["亮黄","#F1C530"],
+    ["亮艳草绿2","#65DF4F"], ["朱红","#BE5D65"], ["中灰","#676B73"], ["黄绿3","#7F971A"], ["亮草绿","#97CF87"], ["青","#00A4AC"],
+    ["蓝紫2","#7292E2"], ["艳朱红2","#FF3956"], ["亮朱红","#F57E66"], ["灰白","#D8D2CE"], ["青绿2","#007D6E"], ["浅灰","#9B9B9B"],
+    ["艳玫红3","#B90295"], ["紫红2","#A75D9D"], ["艳蓝紫","#1054C0"], ["暗黄绿","#3D461B"], ["深灰2","#3B2F23"], ["亮天蓝","#42CCFF"],
+    ["艳蓝紫2","#406AE1"], ["艳玫红4","#FD6FB4"], ["暗青","#005D57"], ["灰白2","#F4E2D6"], ["亮黄2","#CEA433"], ["亮天蓝2","#84BAC2"],
+    ["橙3","#BB6833"], ["亮艳黄绿3","#DAF05C"], ["亮玫红2","#D293BE"], ["浅草绿2","#C4E6B5"], ["亮黄3","#CFC179"], ["暗紫2","#3D2E55"],
+    ["艳黄绿","#8EC324"], ["亮紫","#D5B9F8"], ["亮青绿","#49D1AE"], ["朱红2","#B0443D"], ["暗艳蓝紫2","#2F1F90"], ["艳草绿2","#029D26"],
+    ["紫红3","#803897"], ["浅朱红","#F2C1C0"], ["深灰蓝紫","#222838"], ["蓝紫3","#83A6DC"], ["暗红2","#843947"], ["艳朱红3","#DF2638"],
+    ["亮紫2","#B8AAD9"], ["橙4","#DC772B"], ["黄","#8D8B51"], ["玫红","#9F7494"], ["草绿2","#007D2B"], ["青绿3","#72AC9A"],
+    ["紫3","#A45EC7"], ["玫红2","#DA5B95"], ["暗灰","#4D4D4D"], ["艳橙3","#FF8837"], ["暗红3","#9D1A38"], ["玫红3","#983864"],
+    ["暗蓝","#0E5092"], ["艳紫红4","#B643AC"], ["玫红4","#8A5877"], ["暗朱红2","#6F201F"], ["亮黄4","#B6AE84"], ["亮朱红2","#FD957B"],
+    ["暗玫红","#6F3255"], ["紫红4","#B096B9"], ["亮青2","#23C4C6"], ["亮草绿2","#5FC873"], ["亮黄5","#CDC03F"], ["亮艳黄绿4","#ADE945"],
+    ["朱红3","#CA694F"], ["蓝3","#5D88B2"], ["蓝紫4","#487ED5"], ["亮橙黄2","#E2A365"], ["橙5","#9B6B45"], ["蓝4","#58A0D9"],
+    ["蓝紫5","#4C6388"], ["草绿3","#4DAB64"], ["天蓝","#0F909D"], ["浅天蓝","#8BDBFA"], ["灰黄","#696046"], ["浅灰玫红","#FFE2EA"],
+    ["紫红5","#D977CD"], ["蓝紫6","#4167B4"], ["亮橙黄3","#FFBB59"], ["天蓝2","#007D91"], ["艳紫红5","#9A009B"], ["浅黄2","#FFDF58"],
+    ["紫4","#644591"], ["艳红2","#FC6C85"], ["暗橙","#83411E"], ["暗蓝紫2","#1E3175"], ["紫5","#AC7BDE"], ["暗灰2","#3A3D41"],
+    ["亮玫红3","#DFABBC"], ["玫红5","#AF739A"], ["浅黄绿2","#F5FCD1"], ["艳玫红5","#F95498"], ["深灰草绿","#1E2C1C"], ["艳朱红4","#E5533C"],
+    ["橙6","#C79582"], ["暗紫3","#4A388A"], ["艳草绿3","#6CC24A"], ["亮艳草绿3","#5BE419"], ["黄2","#AB9745"], ["亮紫红","#F2A5E8"],
+    ["浅灰2","#C2C4C2"], ["浅黄3","#E1D367"], ["亮草绿3","#A3DE6F"], ["浅青2","#9EE4DF"], ["暗蓝2","#1C375A"], ["亮天蓝3","#67B4BE"],
+    ["朱红4","#E07B69"], ["浅蓝","#BEDDFF"], ["艳朱红5","#FF2833"], ["蓝紫7","#7776D1"], ["浅灰紫红","#DDC8DD"], ["灰朱红2","#674C44"],
+    ["浅青绿","#5AE8BA"], ["灰橙黄","#B39D88"], ["亮橙3","#FF9D55"], ["暗草绿2","#26523A"], ["蓝5","#0077CA"], ["亮橙黄4","#DF923A"],
+    ["紫6","#9165B2"], ["浅草绿3","#9FF4C2"], ["暗艳蓝紫3","#3837A8"], ["黄绿4","#5B6E35"], ["暗蓝3","#024288"], ["橙黄","#BF9168"],
+    ["浅黄绿3","#BED4A6"], ["浅橙黄","#FFCA9A"], ["亮玫红4","#EB9DB9"], ["暗朱红3","#5C2929"], ["浅黄4","#F5EC8D"], ["亮草绿4","#A9C39B"],
+    ["朱红5","#B38281"], ["亮橙4","#F8956B"], ["青2","#006E69"], ["艳玫红6","#D33893"], ["浅玫红","#FFD5EC"], ["浅灰天蓝","#A9CDD5"],
+    ["浅灰青","#D5FDFF"], ["亮橙5","#D9A58C"], ["艳朱红6","#F96160"], ["亮蓝3","#88BDE2"], ["蓝紫8","#4B5BA3"], ["紫7","#8A7EC2"],
+    ["浅灰3","#99ABAC"], ["艳橙4","#F87633"], ["青绿4","#08774F"], ["朱红6","#C1444A"], ["红2","#C97783"], ["艳红3","#DC4A77"],
+    ["红3","#A56269"], ["艳红4","#BF0142"], ["亮天蓝4","#5BD4F6"], ["灰白3","#E2DFD7"], ["黄3","#907C41"], ["亮黄绿","#ADAD29"],
+    ["浅黄绿4","#DADA3C"], ["暗灰3","#565A5E"], ["草绿4","#729376"], ["中灰2","#8C8A8D"], ["灰蓝紫","#8C8CA7"], ["亮蓝4","#59AEF5"],
+    ["玫红6","#CC78A7"], ["灰蓝紫2","#3D4762"], ["黄绿5","#78A54A"], ["艳草绿4","#01C63E"], ["艳玫红7","#B6006D"], ["朱红7","#934A39"],
+    ["亮草绿5","#8FD35A"], ["亮黄绿2","#C8C85C"], ["橙黄2","#BC9D77"], ["艳朱红7","#C7270D"], ["橙7","#A74D22"], ["暗紫4","#503B9C"],
+    ["亮黄绿3","#9FBA5C"], ["亮黄6","#D3C391"], ["灰朱红3","#7A594F"], ["灰白4","#F9F2EB"], ["浅黄绿5","#D8E47C"], ["橙黄3","#C7832F"],
+    ["亮紫3","#C2BBE4"], ["青3","#009188"], ["艳草绿5","#34C75B"], ["灰黄绿","#9AA98E"], ["浅青3","#69E3D5"], ["暗草绿3","#345621"],
+    ["暗朱红4","#91020A"], ["紫8","#8E69CD"], ["浅青绿2","#B3EED5"], ["暗青绿","#045F45"], ["亮蓝5","#7DC4FF"], ["亮黄7","#C4AE64"],
+    ["蓝6","#1757A8"], ["亮艳黄","#F8EC31"], ["橙8","#8D614C"], ["亮青绿2","#49BCA9"], ["暗玫红2","#921E5D"], ["灰红","#BD9CA3"],
+    ["蓝紫9","#658AD0"], ["深灰草绿2","#183823"], ["亮朱红3","#FFA9AD"], ["浅灰黄绿","#E1E2BB"], ["蓝紫10","#1B60C3"], ["蓝7","#0588CC"],
+    ["亮黄8","#E5BE55"], ["灰白5","#D6D2E2"], ["灰青绿2","#254B3C"], ["亮玫红5","#DDA1CC"], ["亮橙黄5","#E4AA32"], ["亮青绿3","#7CD2A5"],
+    ["艳红5","#FF4B78"], ["蓝8","#01ACEB"], ["亮橙6","#FFAC78"], ["中灰3","#697D80"], ["浅黄绿6","#D7FAA0"], ["暗紫5","#6C2988"],
+    ["浅草绿4","#9EE5B9"], ["艳红6","#A3134A"], ["亮玫红6","#E182B0"], ["亮蓝紫","#AEB4F2"], ["亮红","#DC9EA9"], ["灰橙黄2","#C8B693"],
+    ["艳紫红6","#B843C5"], ["天蓝3","#279BBE"], ["浅紫红","#E9C3F6"], ["黄绿6","#8F8E3C"], ["艳玫红8","#E8649E"], ["亮天蓝5","#60BFCB"],
+    ["灰蓝紫3","#A2B2D3"], ["草绿5","#6E975F"], ["亮紫红2","#D38ED4"], ["深紫","#361B50"], ["艳玫红9","#C1388A"], ["浅灰橙黄","#E2D0BF"],
+    ["灰白6","#C4D0E3"], ["朱红8","#B35540"], ["浅灰青绿","#B8DBC7"], ["蓝9","#3177B0"], ["艳朱红8","#DF475C"], ["浅黄5","#F1D937"],
+    ["青绿5","#03AC88"], ["暗朱红5","#6C372F"], ["浅黄绿7","#C6ED9C"], ["暗蓝4","#004C7D"], ["蓝紫11","#577DBE"], ["亮橙黄6","#F19937"],
+    ["紫红6","#9A56B4"], ["亮黄绿4","#9BB13A"], ["红4","#E2677A"], ["亮艳橙黄","#FFB100"], ["橙9","#9D5B3E"], ["紫9","#644FA4"],
+    ["艳蓝紫3","#484FC7"], ["浅黄6","#FEF9AE"], ["草绿6","#37B876"], ["亮草绿6","#6DCC94"], ["黄绿7","#72833F"], ["艳朱红9","#B11836"],
+    ["浅灰天蓝2","#C4DFE8"], ["亮青绿4","#80B7A1"], ["亮橙黄7","#E6B483"], ["亮蓝6","#6AAEDB"], ["草绿7","#48AF4F"], ["暗灰4","#474747"],
+    ["艳紫红7","#B02FA4"], ["浅黄7","#EFCD67"], ["玫红7","#B1628E"], ["暗紫6","#6E399A"], ["艳玫红10","#F378CA"], ["橙10","#A76224"],
+    ["橙黄4","#A87443"], ["亮黄9","#EAC431"], ["浅灰4","#B4B8A7"], ["艳红7","#CA3B65"], ["浅玫红2","#F9C1D7"], ["红5","#D25D72"],
+    ["亮橙黄8","#D9B35E"], ["浅灰朱红","#FFD0CB"], ["中灰4","#777169"], ["草绿8","#3C6E48"], ["艳朱红10","#D14337"], ["青4","#03B9B9"],
+    ["橙11","#C67B4F"], ["浅橙黄2","#FFE1A1"], ["深灰3","#2C2C2C"], ["亮草绿7","#A5D38B"], ["亮青3","#3DCFCA"], ["艳朱红11","#FC3F3F"],
+    ["灰朱红4","#E1B4AB"], ["艳紫红8","#8B279B"], ["朱红9","#99323A"], ["黄4","#A59F65"], ["亮紫4","#AF9FCE"], ["灰白7","#E7DCE6"],
+    ["艳朱红12","#D80127"], ["浅灰黄","#F3ECC8"], ["浅黄绿8","#E7E45A"], ["橙黄5","#C4913E"], ["朱红10","#D5514D"], ["草绿9","#297A3B"],
+    ["中灰5","#786562"], ["深灰蓝","#1C3344"], ["灰蓝紫4","#2F3C55"], ["亮红2","#EA8AA5"], ["浅灰黄2","#D0CCAA"], ["蓝紫12","#566CBD"],
+    ["橙12","#AB613C"], ["艳朱红13","#C02435"], ["紫10","#9C87D6"], ["亮艳黄绿5","#D2E318"], ["蓝紫13","#7786E5"], ["艳橙5","#F3601B"],
+    ["蓝10","#6B9AD4"], ["深灰黄绿","#303921"], ["暗蓝紫3","#182A84"], ["紫11","#9E6DC6"], ["白2","#F6F9E5"], ["蓝11","#0065B1"],
+    ["艳玫红11","#EF67B2"], ["亮青绿5","#6CC8AD"], ["天蓝4","#0FACD1"], ["暗蓝紫4","#333995"], ["灰白8","#EAEEF3"], ["灰天蓝","#6A8890"],
+    ["亮玫红7","#FF97C3"], ["玫红8","#C685B1"], ["浅橙黄3","#FFD67D"], ["蓝紫14","#7E84BE"], ["亮青绿6","#18C7B1"], ["亮蓝7","#69C2EE"],
+    ["玫红9","#D668A7"], ["浅灰橙","#F4D9C4"], ["艳玫红12","#D62779"], ["灰天蓝2","#36515C"], ["中灰6","#968381"], ["青绿6","#538771"],
+    ["暗红4","#6A1A35"], ["暗灰5","#685951"], ["亮朱红4","#F99297"], ["浅黄绿9","#CDE55D"], ["艳蓝紫4","#314BCA"], ["亮草绿8","#94CCA4"],
+    ["暗蓝5","#004FA4"], ["灰蓝","#8AAFC2"], ["暗紫7","#64427E"], ["紫红7","#B460C3"], ["浅紫","#CCC5ED"], ["深红2","#531A23"],
+    ["浅灰5","#C5B1BC"], ["蓝紫15","#3054AF"], ["亮橙黄9","#C5A27C"], ["浅黄8","#FECF4D"], ["亮蓝紫2","#A7BAE1"], ["蓝紫16","#586B8F"],
+    ["亮艳黄绿6","#E5EF13"], ["天蓝5","#60A7AD"], ["蓝12","#17779D"], ["艳草绿6","#79CD41"], ["亮朱红5","#E8A498"], ["亮天蓝6","#02BDD1"],
+    ["亮草绿9","#80DF96"], ["天蓝6","#1787A2"], ["灰草绿","#8AA385"], ["亮玫红8","#F479B0"], ["浅天蓝2","#A0E2FB"], ["黄绿8","#8CA12A"],
+    ["蓝13","#2D6DB2"], ["浅橙","#FEB89F"], ["浅黄9","#E9E290"], ["亮艳黄绿7","#A7D446"]
+  ],
+  "common96": [
+    ["黑","#000000"], ["灰白","#F9F2EB"], ["艳朱红","#BE0A27"], ["艳草绿","#0CBD51"], ["暗蓝紫","#30429E"], ["紫","#B38EDB"],
+    ["亮橙黄","#F0A149"], ["深红","#531A23"], ["草绿","#156F40"], ["艳紫红","#9C32B2"], ["亮艳黄绿","#F2F33C"], ["艳红","#FF477A"],
+    ["亮青","#96D1D4"], ["蓝","#0084B7"], ["亮艳草绿","#1EF942"], ["黄","#907C41"], ["亮玫红","#EB9DB9"], ["艳橙","#F87633"],
+    ["暗灰","#383E44"], ["紫红","#714875"], ["亮黄绿","#BBD747"], ["蓝2","#51AEE4"], ["浅黄","#F6D993"], ["深灰","#141315"],
+    ["蓝紫","#4E56A3"], ["草绿2","#297A3B"], ["玫红","#D8729A"], ["黄绿","#9BAB5A"], ["玫红2","#9A2461"], ["浅灰紫","#D7CDF1"],
+    ["深紫","#361B50"], ["浅灰","#B4B8A7"], ["橙","#895D49"], ["紫红2","#A37A9B"], ["艳紫红2","#CB59B9"], ["暗紫","#4F3989"],
+    ["亮草绿","#80DF96"], ["青绿","#25B88C"], ["艳玫红","#DA4383"], ["暗灰2","#4C4C4C"], ["蓝3","#006C9F"], ["紫红3","#DB77CF"],
+    ["朱红","#9A2C31"], ["灰青绿","#5F887B"], ["艳朱红2","#DB4F3E"], ["浅灰天蓝","#C4DFE8"], ["暗红","#6A1A35"], ["橙黄","#BF9168"],
+    ["亮橙","#EBB38E"], ["浅黄绿","#EAFCB6"], ["暗蓝","#004C7D"], ["黄绿2","#5D722A"], ["亮蓝","#AECEF0"], ["亮黄","#ECC03D"],
+    ["亮艳草绿2","#65DF4F"], ["朱红2","#C9675D"], ["中灰","#676B73"], ["黄绿3","#7F971A"], ["亮草绿2","#87CC9D"], ["天蓝","#2F99B3"],
+    ["蓝紫2","#6E8CCC"], ["艳朱红3","#FC3D45"], ["亮朱红","#EE927C"], ["灰白2","#CED1C8"], ["青绿2","#007D6E"], ["中灰2","#909497"],
+    ["艳紫红3","#B02FA4"], ["紫红4","#A65CBF"], ["蓝紫3","#2659B2"], ["暗草绿","#2E5132"], ["深灰2","#3B2F23"], ["亮天蓝","#77CEE9"],
+    ["蓝紫4","#3B75CB"], ["亮玫红2","#F479B0"], ["暗青","#0C5C5B"], ["灰白3","#F5DCD8"], ["亮橙黄2","#DF923A"], ["亮天蓝2","#67B4BE"],
+    ["橙2","#AA744E"], ["浅黄绿2","#E7E45A"], ["灰玫红","#C2A3B7"], ["浅草绿","#C4E6B5"], ["亮黄2","#CFC179"], ["灰蓝紫","#36384D"],
+    ["艳草绿2","#6CC24A"], ["灰紫","#C0B7D7"], ["亮青绿","#52CAAC"], ["朱红3","#B0443D"], ["暗蓝紫2","#182A84"], ["艳草绿3","#029D26"],
+    ["艳紫红4","#842A94"], ["浅朱红","#F2C1C0"], ["深灰3","#292A2B"], ["亮蓝紫","#9AB2DB"], ["暗红2","#68393F"], ["艳朱红4","#CF3E45"]
+  ],
+  "common48": [
+    ["黑","#000000"], ["灰白","#F7F3E4"], ["艳朱红","#C02435"], ["艳草绿","#0CBD51"], ["暗蓝紫","#333995"], ["亮蓝紫","#AEADDC"],
+    ["亮橙黄","#F0AB47"], ["深红","#531A23"], ["暗青绿","#045F45"], ["艳紫红","#A137A7"], ["浅黄","#F5E87F"], ["艳朱红2","#F34461"],
+    ["浅灰天蓝","#A7CDDE"], ["蓝","#3687B2"], ["亮艳草绿","#65DF4F"], ["橙","#AA744E"], ["亮朱红","#E4A89E"], ["艳橙","#F87633"],
+    ["暗灰","#3A3A3A"], ["中灰","#676B73"], ["浅黄2","#E7CE3E"], ["蓝2","#67ADCF"], ["浅橙黄","#EED39E"], ["深灰","#141315"],
+    ["蓝紫","#416DBE"], ["草绿","#33793B"], ["玫红","#D8729A"], ["黄绿","#9BAB5A"], ["玫红2","#9A2461"], ["灰白2","#E1CCD2"],
+    ["深蓝","#1C334D"], ["浅灰","#A7ACAD"], ["橙2","#8D5C3E"], ["紫","#937FBF"], ["紫红","#A65CBF"], ["暗紫","#5D3F87"],
+    ["亮草绿","#82D7A1"], ["亮青绿","#49BCA9"], ["艳玫红","#DA4383"], ["暗灰2","#4C4C4C"], ["蓝紫2","#2659B2"], ["亮紫红","#D38ED4"],
+    ["朱红","#9A2C31"], ["灰青绿","#668575"], ["朱红2","#D5514D"], ["灰白3","#D5E3DE"], ["暗红","#612932"], ["橙黄","#CB9360"]
+  ],
+  "common24": [
+    ["黑","#000000"], ["灰白","#EDEDE7"], ["朱红","#B0353C"], ["草绿","#69B845"], ["蓝紫","#3D54A0"], ["紫","#AB91C0"],
+    ["亮橙黄","#E2A365"], ["暗红","#612932"], ["青绿","#08774F"], ["艳紫红","#A137A7"], ["浅黄","#F5E87F"], ["艳玫红","#E8649E"],
+    ["浅灰蓝紫","#BCC3E1"], ["蓝","#3687B2"], ["亮草绿","#80DF96"], ["橙黄","#A58767"], ["亮玫红","#DFABBC"], ["艳橙","#F26A34"],
+    ["暗灰","#3A3A3A"], ["灰朱红","#7A594F"], ["亮黄","#ECC03D"], ["天蓝","#5AB0BF"], ["浅灰橙黄","#E2D0BF"], ["深灰","#141315"]
+  ],
+  "dbk221": [
+    ["A1","#F1E7A9"], ["A2","#E5E3AB"], ["A3","#F7E368"], ["A4","#F8D912"], ["A5","#FBC40C"], ["A6","#F2B52E"],
+    ["A7","#F7790A"], ["A8","#E1C127"], ["A9","#F49633"], ["A10","#F48F3F"], ["A11","#F8CB85"], ["A12","#F8B291"],
+    ["A13","#F6B33A"], ["A14","#F55219"], ["A15","#F5E453"], ["A16","#F6ED90"], ["A17","#F9CA5E"], ["A18","#F8B971"],
+    ["A19","#F77F6D"], ["A20","#F5CD67"], ["A21","#F6C562"], ["A22","#F4D687"], ["A23","#EBD499"], ["A24","#EBCFAB"],
+    ["A25","#EDE1AF"], ["A26","#E1B34D"], ["B1","#D8DA22"], ["B2","#A2C624"], ["B3","#8DC98B"], ["B4","#5FC74B"],
+    ["B5","#62A243"], ["B6","#5ACD9C"], ["B7","#0AAE8F"], ["B8","#078A43"], ["B9","#094635"], ["B10","#A9DBC8"],
+    ["B11","#6E853C"], ["B12","#0F6A47"], ["B13","#C8E384"], ["B14","#C6E33C"], ["B15","#116333"], ["B16","#C3DE9D"],
+    ["B17","#9EB429"], ["B18","#D7DC6B"], ["B19","#43C897"], ["B20","#B6E2C1"], ["B21","#43949C"], ["B22","#14777A"],
+    ["B23","#475250"], ["B24","#7D826E"], ["B25","#CCD7AE"], ["B26","#7F988E"], ["B27","#B19A5A"], ["B28","#BAC7A9"],
+    ["B29","#84C69C"], ["B30","#92AF5C"], ["B31","#A4AC7F"], ["B32","#788762"], ["C1","#D8E4CC"], ["C2","#B7E4E8"],
+    ["C3","#B7DFE6"], ["C4","#8BD7EC"], ["C5","#08B8C4"], ["C6","#7AB2D8"], ["C7","#457ABE"], ["C8","#0771C2"],
+    ["C9","#3B5FC1"], ["C10","#27ADC9"], ["C11","#12A4AC"], ["C12","#374661"], ["C13","#BFD1E0"], ["C14","#D5EAE4"],
+    ["C15","#19B2B1"], ["C16","#316CA5"], ["C17","#67C2D1"], ["C18","#45546B"], ["C19","#2C8CA0"], ["C20","#2089B8"],
+    ["C21","#C5D3DD"], ["C22","#9ABFC2"], ["C23","#8FBEC0"], ["C24","#A6BFCB"], ["C25","#7EC0D4"], ["C26","#82CAC0"],
+    ["C27","#33A8C2"], ["C28","#D3DBDE"], ["C29","#97A4B6"], ["D1","#A6AFE9"], ["D2","#7C87C0"], ["D3","#2A4B97"],
+    ["D4","#293C77"], ["D5","#B34EBA"], ["D6","#997DBD"], ["D7","#663D84"], ["D8","#E0D2F1"], ["D9","#C7BAE4"],
+    ["D10","#402D55"], ["D11","#C1C2E6"], ["D12","#D69ED2"], ["D13","#AD1991"], ["D14","#7A268A"], ["D15","#483585"],
+    ["D16","#D7D5E3"], ["D17","#C6CDED"], ["D18","#A868BF"], ["D19","#DFCDDB"], ["D20","#AC62BD"], ["D21","#952D90"],
+    ["D22","#775594"], ["D23","#8F8CA8"], ["D24","#C6C2DE"], ["D25","#9096C9"], ["D26","#5563BE"], ["E1","#FDDEDE"],
+    ["E2","#FAC5DF"], ["E3","#F7A1BA"], ["E4","#EA7AAA"], ["E5","#F267AB"], ["E6","#F84C78"], ["E7","#B22064"],
+    ["E8","#F8D8DF"], ["E9","#E776C2"], ["E10","#CB2E7E"], ["E11","#F1D6CD"], ["E12","#F79FD0"], ["E13","#B70966"],
+    ["E14","#F8D1B9"], ["E15","#E6C4C1"], ["E16","#EDD4CD"], ["E17","#F2D5DA"], ["E18","#F2B7C5"], ["E19","#F4D1E0"],
+    ["E20","#EACFDA"], ["E21","#D3A6A6"], ["E22","#D190A1"], ["E23","#BF879F"], ["E24","#C7A2B5"], ["F1","#FC9967"],
+    ["F2","#F25252"], ["F3","#E53E2E"], ["F4","#E72330"], ["F5","#BE0814"], ["F6","#A84937"], ["F7","#7A1434"],
+    ["F8","#BA1A35"], ["F9","#E27588"], ["F10","#8D441E"], ["F11","#73353F"], ["F12","#F1445F"], ["F13","#DC5642"],
+    ["F14","#F3A796"], ["F15","#CE1B2B"], ["F16","#F1C2B5"], ["F17","#EFA595"], ["F18","#E49681"], ["F19","#BF4B54"],
+    ["F20","#D2AC9C"], ["F21","#E1B1AE"], ["F22","#EBAEAD"], ["F23","#ED9E8B"], ["F24","#EF9183"], ["F25","#ED9B9C"],
+    ["G1","#F5D8C4"], ["G2","#FBC198"], ["G3","#E5B596"], ["G4","#D1A27E"], ["G5","#E79B6D"], ["G6","#EC7444"],
+    ["G7","#9C5C3B"], ["G8","#603936"], ["G9","#E8B374"], ["G10","#CE933B"], ["G11","#D3C097"], ["G12","#CA9D69"],
+    ["G13","#A86E4E"], ["G14","#956953"], ["G15","#EBDCC4"], ["G16","#E8D3C2"], ["G17","#655555"], ["G18","#EED7B3"],
+    ["G19","#E79351"], ["G20","#BC613D"], ["G21","#CB9181"], ["H1","#FBF8FB"], ["H2","#FBFCFA"], ["H3","#B0AFB2"],
+    ["H4","#777679"], ["H5","#434441"], ["H6","#4C4A48"], ["H7","#090603"], ["H8","#E7D6DA"], ["H9","#DDDDDD"],
+    ["H10","#D4C9CD"], ["H11","#C8C5C6"], ["H12","#EBE3D3"], ["H13","#ECDEC2"], ["H14","#C1C0C0"], ["H15","#999BA6"],
+    ["H16","#474647"], ["H17","#DBD9D5"], ["H18","#EEE9D3"], ["H19","#E7E0CF"], ["H20","#AFABAB"], ["H21","#DFD5C5"],
+    ["H22","#CDC5C4"], ["H23","#B2B1A9"], ["M1","#D4D9D3"], ["M2","#7D8977"], ["M3","#67757B"], ["M4","#D0C0B5"],
+    ["M5","#CBC8A3"], ["M6","#C0B293"], ["M7","#B5A29E"], ["M8","#AB7D71"], ["M9","#B79C81"], ["M10","#B2A0AA"],
+    ["M11","#A58A9A"], ["M12","#665052"], ["M13","#D4977B"], ["M14","#C66F63"], ["M15","#797979"]
+  ],
+};
+if (typeof module !== "undefined" && module.exports) module.exports = PINDOU_PALETTES;
+
 /* =====================================================================
-   CORE：纯算法，不依赖 DOM，可单独在 Node 里跑测试
+   拼豆豆图生成器 · 核心算法 v15（纯函数，无 DOM 依赖）
+   ---------------------------------------------------------------------
+   算法参考（GitHub 高星项目）：
+   - Zippland/perler-beads (1048★)：Oklab 颜色距离
+   - LunarXuan/Pindo (455★)     ：线性光面积降采样、CIEDE2000 精排
+   - zwhy149/bead-grid-studio (204★)：Oklab 粗筛 + CIEDE2000 复排、纯函数架构
+   - ImageOptim/libimagequant (938★)：误差扩散的阻尼/门控、量化前降噪思路
+   - maxcleme/beadcolors (MIT)  ：通用色卡的真实豆色数据
+   ---------------------------------------------------------------------
+   修复要点：
+   1. 采样：sRGB 均值 → 线性光精确面积平均（消除缩小时的压暗/偏色）
+   2. 匹配：CIE76 Lab 欧氏 → Oklab 粗筛 + CIEDE2000 精排（色相/肤色更准）
+   3. 去噪：删除 3×3 色度中值、删掉「色相离群合并」(ΔE≤26) 等过激后处理，
+      改为只对平坦区做受数据项约束的邻域平滑（保边）
+   4. 抖动：默认关闭；开启时用蛇形扫描 + 误差阻尼，避免方向性噪点
+   5. 调色板：真实豆色（MIT 数据）替代数学合成色
    ===================================================================== */
-function clamp255(v){ return v < 0 ? 0 : (v > 255 ? 255 : v); }
+var PindouCore = (function () {
+  "use strict";
 
-function hexToRgb(hex){
-  var h = String(hex || "").trim().replace(/^#/, "");
-  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-  if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
-  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
-}
-function rgbToHex(r,g,b){
-  return "#" + [clamp255(Math.round(r)), clamp255(Math.round(g)), clamp255(Math.round(b))]
-    .map(function(v){ return v.toString(16).padStart(2,"0").toUpperCase(); }).join("");
-}
-/* sRGB -> CIE Lab（D65），色差更贴近人眼，渐变过渡更自然 */
-function srgbToLab(r, g, b){
-  var rl = r/255, gl = g/255, bl = b/255;
-  rl = rl > 0.04045 ? Math.pow((rl + 0.055) / 1.055, 2.4) : rl / 12.92;
-  gl = gl > 0.04045 ? Math.pow((gl + 0.055) / 1.055, 2.4) : gl / 12.92;
-  bl = bl > 0.04045 ? Math.pow((bl + 0.055) / 1.055, 2.4) : bl / 12.92;
-  var X = (rl*0.4124 + gl*0.3576 + bl*0.1805) / 0.95047;
-  var Y = (rl*0.2126 + gl*0.7152 + bl*0.0722) / 1.00000;
-  var Z = (rl*0.0193 + gl*0.1192 + bl*0.9505) / 1.08883;
-  var fx = X > 0.008856 ? Math.cbrt(X) : (7.787 * X) + 16/116;
-  var fy = Y > 0.008856 ? Math.cbrt(Y) : (7.787 * Y) + 16/116;
-  var fz = Z > 0.008856 ? Math.cbrt(Z) : (7.787 * Z) + 16/116;
-  return [ (116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz) ];
-}
-function labDist(a, b){
-  var dL = a[0]-b[0], da = a[1]-b[1], db = a[2]-b[2];
-  return dL*dL + da*da + db*db;
-}
-function matchColor(r, g, b, palette){
-  var lab = srgbToLab(r, g, b);
-  var best = 0, bestD = Infinity;
-  for (var i = 0; i < palette.length; i++){
-    var d = labDist(lab, palette[i].lab);
-    if (d < bestD){ bestD = d; best = i; }
-  }
-  return best;
-}
-function srgbLuma(r, g, b){ return 0.2126*r + 0.7152*g + 0.0722*b; }
+  /* ---------------- 基础颜色数学 ---------------- */
+  function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
 
-/* 画面调整：亮度 / 对比度 / 饱和度（在平均后的每格颜色上做，快且无副作用） */
-function adjustColor(rgb, adj){
-  var r = rgb[0], g = rgb[1], b = rgb[2], d, c, l, s;
-  if (adj.bright){
-    d = adj.bright * 2.55;
-    r += d; g += d; b += d;
+  function hexToRgb(hex) {
+    var h = String(hex || "").trim().replace(/^#/, "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
   }
-  if (adj.contrast){
-    var k = adj.contrast * 2.55;
-    c = (259 * (k + 255)) / (255 * (259 - k));
-    r = c * (r - 128) + 128; g = c * (g - 128) + 128; b = c * (b - 128) + 128;
+  function rgbToHex(r, g, b) {
+    return "#" + [clamp255(Math.round(r)), clamp255(Math.round(g)), clamp255(Math.round(b))]
+      .map(function (v) { return v.toString(16).padStart(2, "0"); }).join("").toUpperCase();
   }
-  if (adj.sat){
-    l = srgbLuma(r, g, b);
-    s = 1 + adj.sat / 100;
-    r = l + (r - l) * s; g = l + (g - l) * s; b = l + (b - l) * s;
+  function srgbToLinear(v) {
+    var c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   }
-  return [clamp255(r), clamp255(g), clamp255(b)];
-}
+  function linearToSrgb(v) {
+    var s = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+    return clamp255(s * 255);
+  }
+  function srgbLuma(r, g, b) { return 0.2126 * r + 0.7152 * g + 0.0722 * b; }
 
-/*
- * 量化：把 rows×cols 的原始像素（每格 [r,g,b] 或 null=空豆）映射到色板索引
- * dither=true 时用 Floyd–Steinberg 抖动（空豆格不参与误差传递）
- * 返回 { grid:[rows][cols] 索引或 null, counts:[色板长度] 颗数 }
- */
-function quantize(pixels, rows, cols, palette, dither){
-  var grid = [], counts = new Array(palette.length).fill(0);
-  var i, j, px;
-  for (i = 0; i < rows; i++){
-    var row = new Array(cols);
-    for (j = 0; j < cols; j++){
-      px = pixels[i][j];
-      row[j] = px ? matchColor(px[0], px[1], px[2], palette) : null;
+  /* sRGB -> Oklab（Ottosson），用于快速、感知均匀的粗筛 */
+  function rgbToOklab(r, g, b) {
+    var rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+    var l = Math.cbrt(0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl);
+    var m = Math.cbrt(0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl);
+    var s = Math.cbrt(0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl);
+    return [
+      0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    ];
+  }
+  function oklabToRgb(L, a, b) {
+    var l = L + 0.3963377774 * a + 0.2158037573 * b;
+    var m = L - 0.1055613458 * a - 0.0638541728 * b;
+    var s = L - 0.0894841775 * a - 1.2914855480 * b;
+    var l3 = l * l * l, m3 = m * m * m, s3 = s * s * s;
+    var r = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+    var g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+    var bb = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+    return [linearToSrgb(Math.max(0, Math.min(1, r))),
+            linearToSrgb(Math.max(0, Math.min(1, g))),
+            linearToSrgb(Math.max(0, Math.min(1, bb)))];
+  }
+  function oklabDistance(a, b) {
+    var dl = a[0] - b[0], da = a[1] - b[1], db = a[2] - b[2];
+    return Math.sqrt(dl * dl + da * da + db * db);
+  }
+
+  /* sRGB -> CIE Lab (D65) */
+  function rgbToLab(r, g, b) {
+    var rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+    var X = (rl * 0.4124564 + gl * 0.3575761 + bl * 0.1804375) / 0.95047;
+    var Y = (rl * 0.2126729 + gl * 0.7151522 + bl * 0.0721750);
+    var Z = (rl * 0.0193339 + gl * 0.1191920 + bl * 0.9503041) / 1.08883;
+    var f = function (t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; };
+    var fx = f(X), fy = f(Y), fz = f(Z);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+
+  /* CIEDE2000 色差（kL=kC=kH=1）。色相比 CIE76 更接近人眼。 */
+  function deltaE2000(lab1, lab2) {
+    var L1 = lab1[0], a1 = lab1[1], b1 = lab1[2];
+    var L2 = lab2[0], a2 = lab2[1], b2 = lab2[2];
+    var rad = Math.PI / 180, deg = 180 / Math.PI;
+    var c1 = Math.sqrt(a1 * a1 + b1 * b1), c2 = Math.sqrt(a2 * a2 + b2 * b2);
+    var cb = (c1 + c2) / 2, cb7 = Math.pow(cb, 7);
+    var G = 0.5 * (1 - Math.sqrt(cb7 / (cb7 + Math.pow(25, 7))));
+    var a1p = (1 + G) * a1, a2p = (1 + G) * a2;
+    var c1p = Math.sqrt(a1p * a1p + b1 * b1), c2p = Math.sqrt(a2p * a2p + b2 * b2);
+    var h1p = Math.atan2(b1, a1p) * deg; if (h1p < 0) h1p += 360;
+    var h2p = Math.atan2(b2, a2p) * deg; if (h2p < 0) h2p += 360;
+    var dLp = L2 - L1, dCp = c2p - c1p, dhp = 0;
+    if (c1p * c2p !== 0) {
+      dhp = h2p - h1p;
+      if (dhp > 180) dhp -= 360; else if (dhp < -180) dhp += 360;
     }
-    grid.push(row);
+    var dHp = 2 * Math.sqrt(c1p * c2p) * Math.sin(dhp * rad / 2);
+    var lBar = (L1 + L2) / 2, cBarp = (c1p + c2p) / 2, hBar = h1p + h2p;
+    if (c1p * c2p !== 0) {
+      hBar = Math.abs(h1p - h2p) <= 180 ? (h1p + h2p) / 2
+        : (h1p + h2p < 360 ? (h1p + h2p + 360) / 2 : (h1p + h2p - 360) / 2);
+    }
+    var t = 1 - 0.17 * Math.cos((hBar - 30) * rad) + 0.24 * Math.cos(2 * hBar * rad)
+      + 0.32 * Math.cos((3 * hBar + 6) * rad) - 0.20 * Math.cos((4 * hBar - 63) * rad);
+    var dTheta = 30 * Math.exp(-Math.pow((hBar - 275) / 25, 2));
+    var cb7p = Math.pow(cBarp, 7), rc = 2 * Math.sqrt(cb7p / (cb7p + Math.pow(25, 7)));
+    var sl = 1 + 0.015 * Math.pow(lBar - 50, 2) / Math.sqrt(20 + Math.pow(lBar - 50, 2));
+    var sc = 1 + 0.045 * cBarp, sh = 1 + 0.015 * cBarp * t;
+    var rt = -Math.sin(2 * dTheta * rad) * rc;
+    var dl = dLp / sl, dc = dCp / sc, dh = dHp / sh;
+    return Math.sqrt(Math.max(0, dl * dl + dc * dc + dh * dh + rt * dc * dh));
   }
-  if (dither){
-    /* 误差阻尼：全量扩散会把颗粒抖得很粗（浅色区尤其明显），
-       折掉一部分误差，渐变照样平滑，但颗粒细很多。 */
-    var DAMP = 0.72;
-    var buf = new Array(rows);
-    for (i = 0; i < rows; i++){
-      buf[i] = new Array(cols);
-      for (j = 0; j < cols; j++){
-        px = pixels[i][j];
-        buf[i][j] = px ? [px[0], px[1], px[2]] : null;
+
+  /* 画面调整：亮度 / 对比度 / 饱和度（在每格颜色上做） */
+  function adjustColor(rgb, adj) {
+    if (!adj) return rgb;
+    var r = rgb[0], g = rgb[1], b = rgb[2], d, c, l, s;
+    if (adj.bright) {
+      d = adj.bright * 2.55;
+      r += d; g += d; b += d;
+    }
+    if (adj.contrast) {
+      var k = adj.contrast * 2.55;
+      c = (259 * (k + 255)) / (255 * (259 - k));
+      r = c * (r - 128) + 128; g = c * (g - 128) + 128; b = c * (b - 128) + 128;
+    }
+    if (adj.sat) {
+      l = srgbLuma(r, g, b);
+      s = 1 + adj.sat / 100;
+      r = l + (r - l) * s; g = l + (g - l) * s; b = l + (b - l) * s;
+    }
+    return [clamp255(r), clamp255(g), clamp255(b)];
+  }
+
+  /* ---------------- 色卡 ---------------- */
+  /* 接受 [[name, hex], ...] 或 [{name,hex,rgb}, ...]，返回带 lab/oklab 的对象数组 */
+  function compilePalette(list) {
+    if (!list) return [];
+    if (list.__compiled) return list;
+    var out = new Array(list.length);
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i], name = null, hex = null, rgb = null;
+      if (Object.prototype.toString.call(item) === "[object Array]") { name = item[0]; hex = item[1]; }
+      else { name = item.name; hex = item.hex; rgb = item.rgb; }
+      if (!rgb) rgb = hexToRgb(hex);
+      if (!rgb) { out[i] = null; continue; }
+      rgb = [clamp255(rgb[0]), clamp255(rgb[1]), clamp255(rgb[2])];
+      out[i] = {
+        name: String(name == null ? hex : name),
+        hex: rgbToHex(rgb[0], rgb[1], rgb[2]),
+        rgb: rgb,
+        lab: rgbToLab(rgb[0], rgb[1], rgb[2]),
+        oklab: rgbToOklab(rgb[0], rgb[1], rgb[2])
+      };
+    }
+    Object.defineProperty(out, "__compiled", { value: true });
+    return out;
+  }
+
+  function parsePaletteText(text) {
+    var lines = String(text || "").split(/\r?\n/);
+    var out = [];
+    var isHex = function (s) { return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s); };
+    var isNum = function (s) { return /^-?\d+(\.\d+)?$/.test(s); };
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      if (line.charAt(0) === "#" && !isHex(line)) continue;
+      var name = null, rgb = null;
+      var parts = line.split(/[,\uFF0C;\t]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+      if (parts.length >= 1 && isHex(parts[0])) {
+        rgb = hexToRgb(parts[0]);
+        name = parts.length > 1 ? parts[1] : parts[0];
+      } else if (parts.length >= 2 && isHex(parts[1])) {
+        rgb = hexToRgb(parts[1]);
+        name = parts[0];
+      } else if (parts.length >= 4 && isNum(parts[1]) && isNum(parts[2]) && isNum(parts[3])) {
+        rgb = [parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])];
+        name = parts[0];
+      } else if (parts.length >= 3 && isNum(parts[0]) && isNum(parts[1]) && isNum(parts[2])) {
+        rgb = [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])];
+        name = parts.length > 3 ? parts[3] : rgbToHex(rgb[0], rgb[1], rgb[2]);
       }
+      if (!rgb) continue;
+      if (rgb.some(function (v) { return v < 0 || v > 255; })) continue;
+      out.push([name, rgbToHex(rgb[0], rgb[1], rgb[2])]);
     }
-    for (i = 0; i < rows; i++){
-      for (j = 0; j < cols; j++){
-        var old = buf[i][j];
-        if (!old){ grid[i][j] = null; continue; }
-        var k = matchColor(old[0], old[1], old[2], palette);
-        var err = [old[0]-palette[k].rgb[0], old[1]-palette[k].rgb[1], old[2]-palette[k].rgb[2]];
-        err[0] *= DAMP; err[1] *= DAMP; err[2] *= DAMP;
-        grid[i][j] = k;
-        if (j + 1 < cols) addErr(buf[i][j+1], err, 7/16);
-        if (i + 1 < rows){
-          if (j > 0) addErr(buf[i+1][j-1], err, 3/16);
-          addErr(buf[i+1][j], err, 5/16);
-          if (j + 1 < cols) addErr(buf[i+1][j+1], err, 1/16);
+    if (!out.length) throw new Error("没认出任何颜色，请检查格式");
+    return compilePalette(out);
+  }
+
+  /* ---------------- 采样：线性光、按面积精确积分 ---------------- */
+  /*
+   * 每个豆格在源图上覆盖一块矩形，按像素与矩形的重叠面积加权，
+   * 先转线性光再求平均，最后转回 sRGB。这才是"正确的缩小"。
+   * 同时用 6×6 子采样估计格内主色，供可选的线稿增强使用。
+   */
+  function sampleCells(imageData, iw, ih, cols, rows, opts) {
+    opts = opts || {};
+    var data = imageData.data || imageData;
+    var fit = opts.fit || "cover";
+    var zoom = opts.zoom || 1;
+    var posX = typeof opts.posX === "number" ? opts.posX : 0.5;
+    var posY = typeof opts.posY === "number" ? opts.posY : 0.5;
+
+    var ox = 0, oy = 0, stepX, stepY, offX = 0, offY = 0;
+    if (fit === "stretch") {
+      stepX = iw / cols; stepY = ih / rows;
+    } else if (fit === "contain") {
+      var s0 = Math.min(cols / iw, rows / ih);
+      stepX = stepY = 1 / s0;
+      offX = (cols - iw * s0) / 2; offY = (rows - ih * s0) / 2;
+    } else {
+      var s = Math.max(cols / iw, rows / ih) * zoom;
+      stepX = stepY = 1 / s;
+      offX = (cols - iw * s) * posX; offY = (rows - ih * s) * posY;
+    }
+    if (fit === "stretch") { ox = 0; oy = 0; }
+    else { ox = offX; oy = offY; }
+
+    var mapX = fit === "stretch"
+      ? function (t) { return t * stepX; }
+      : function (t) { return (t - ox) * stepX; };
+    var mapY = fit === "stretch"
+      ? function (t) { return t * stepY; }
+      : function (t) { return (t - oy) * stepY; };
+
+    var SUB = 6, SUB2 = SUB * SUB;
+    var colors = new Array(rows), edge = new Array(rows), coverage = new Array(rows);
+    for (var y = 0; y < rows; y++) {
+      var rowC = new Array(cols), rowE = new Array(cols), rowV = new Array(cols);
+      for (var x = 0; x < cols; x++) {
+        var sx0 = mapX(x), sx1 = mapX(x + 1);
+        var sy0 = mapY(y), sy1 = mapY(y + 1);
+        if (sx0 > sx1) { var tmp = sx0; sx0 = sx1; sx1 = tmp; }
+        if (sy0 > sy1) { var tmp2 = sy0; sy0 = sy1; sy1 = tmp2; }
+        var cx0 = Math.max(0, Math.min(iw, sx0)), cx1 = Math.max(0, Math.min(iw, sx1));
+        var cy0 = Math.max(0, Math.min(ih, sy0)), cy1 = Math.max(0, Math.min(ih, sy1));
+        var cellArea = Math.max(1e-9, (sx1 - sx0) * (sy1 - sy0));
+        var R = 0, G = 0, B = 0, A = 0;
+        if (cx1 > cx0 && cy1 > cy0) {
+          var px0 = Math.floor(cx0), px1 = Math.min(iw - 1, Math.ceil(cx1) - 1);
+          var py0 = Math.floor(cy0), py1 = Math.min(ih - 1, Math.ceil(cy1) - 1);
+          for (var py = py0; py <= py1; py++) {
+            var wy = Math.max(0, Math.min(cy1, py + 1) - Math.max(cy0, py));
+            if (wy <= 0) continue;
+            var base = py * iw;
+            for (var px = px0; px <= px1; px++) {
+              var wx = Math.max(0, Math.min(cx1, px + 1) - Math.max(cx0, px));
+              if (wx <= 0) continue;
+              var w = wx * wy, o = (base + px) * 4;
+              var a = data[o + 3] / 255;
+              var rr = data[o] * a + 255 * (1 - a);
+              var gg = data[o + 1] * a + 255 * (1 - a);
+              var bb = data[o + 2] * a + 255 * (1 - a);
+              R += srgbToLinear(rr) * w;
+              G += srgbToLinear(gg) * w;
+              B += srgbToLinear(bb) * w;
+              A += w;
+            }
+          }
         }
-      }
-    }
-  }
-  for (i = 0; i < rows; i++){
-    for (j = 0; j < cols; j++){
-      var g2 = grid[i][j];
-      if (g2 !== null) counts[g2]++;
-    }
-  }
-  return { grid: grid, counts: counts };
-}
-function addErr(px, err, k){
-  if (!px) return;
-  /* 钳到 0~255：不钳的话误差会越滚越大，浅色区就会被推出一堆白点 */
-  px[0] = clamp255(px[0] + err[0]*k);
-  px[1] = clamp255(px[1] + err[1]*k);
-  px[2] = clamp255(px[2] + err[2]*k);
-}
+        /* 没盖到的部分按白底算（和旧版先在白画布上画图的行为一致） */
+        var uncovered = Math.max(0, cellArea - A);
+        var rgb = [
+          Math.round(linearToSrgb((R + uncovered) / cellArea)),
+          Math.round(linearToSrgb((G + uncovered) / cellArea)),
+          Math.round(linearToSrgb((B + uncovered) / cellArea))
+        ];
+        rowC[x] = rgb;
+        rowV[x] = A / cellArea;
 
-/*
- * 细节增强：对"每格平均色"跑一遍 unsharp mask。
- * 小尺寸板子（52/78）每格要吃掉十几个源像素，边缘会被平均磨平，五官和描边
- * 就糊在一起。先让边缘在量化前立起来，最后出来的豆图会清晰很多。
- */
-function sharpenGrid(pixels, rows, cols, amount){
-  var n = rows * cols, y, x, o;
-  var Y = new Float32Array(n), Cb = new Float32Array(n), Cr = new Float32Array(n), ok = new Uint8Array(n);
-  for (y = 0; y < rows; y++){
-    for (x = 0; x < cols; x++){
-      var pp = pixels[y][x];
-      o = y * cols + x;
-      if (!pp) continue;
-      ok[o] = 1;
-      Y[o] = 0.299 * pp[0] + 0.587 * pp[1] + 0.114 * pp[2];
-      Cb[o] = 128 - 0.168736 * pp[0] - 0.331264 * pp[1] + 0.5 * pp[2];
-      Cr[o] = 128 + 0.5 * pp[0] - 0.418688 * pp[1] - 0.081312 * pp[2];
-    }
-  }
-  /* 只锐化亮度：色度保持降噪后的值，避免在边缘重新造出彩色光晕 */
-  var Y2 = new Float32Array(n);
-  for (y = 0; y < rows; y++){
-    for (x = 0; x < cols; x++){
-      o = y * cols + x;
-      if (!ok[o]) continue;
-      var sum = 0, cnt = 0, dy, dx;
-      for (dy = -1; dy <= 1; dy++){
-        for (dx = -1; dx <= 1; dx++){
-          var ny = y + dy, nx = x + dx;
-          if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
-          var q = ny * cols + nx;
-          if (!ok[q]) continue;
-          sum += Y[q]; cnt++;
+        /* 子采样主色：只用于可选线稿增强，默认不参与输出 */
+        var hist = {}, bestKey = -1, bestN = 0, minL = 255, maxL = 0;
+        var darkN = 0, darkR = 0, darkG = 0, darkB = 0, lumSum = 0;
+        for (var sy = 0; sy < SUB; sy++) {
+          var ty = y + (sy + 0.5) / SUB;
+          var spy = Math.floor(mapY(ty));
+          if (spy < 0) spy = 0; else if (spy >= ih) spy = ih - 1;
+          for (var sx = 0; sx < SUB; sx++) {
+            var tx = x + (sx + 0.5) / SUB;
+            var spx = Math.floor(mapX(tx));
+            if (spx < 0) spx = 0; else if (spx >= iw) spx = iw - 1;
+            var oo = (spy * iw + spx) * 4;
+            var aa = data[oo + 3] / 255;
+            var sr = data[oo] * aa + 255 * (1 - aa);
+            var sg = data[oo + 1] * aa + 255 * (1 - aa);
+            var sb = data[oo + 2] * aa + 255 * (1 - aa);
+            var key = ((sr >> 3) << 10) | ((sg >> 3) << 5) | (sb >> 3);
+            var h = hist[key];
+            if (!h) { h = hist[key] = { n: 0, r: 0, g: 0, b: 0 }; }
+            h.n++; h.r += sr; h.g += sg; h.b += sb;
+            if (h.n > bestN) { bestN = h.n; bestKey = key; }
+            var ly = srgbLuma(sr, sg, sb);
+            lumSum += ly;
+            if (ly < minL) minL = ly;
+            if (ly > maxL) maxL = ly;
+            if (ly < 70) { darkN++; darkR += sr; darkG += sg; darkB += sb; }
+          }
         }
+        var dom = hist[bestKey];
+        rowE[x] = {
+          rgb: [dom.r / dom.n, dom.g / dom.n, dom.b / dom.n],
+          share: bestN / SUB2,
+          range: maxL - minL,
+          luma: lumSum / SUB2,
+          darkShare: darkN / SUB2,
+          darkRgb: darkN ? [darkR / darkN, darkG / darkN, darkB / darkN] : null
+        };
       }
-      Y2[o] = cnt ? clamp255(Y[o] + amount * (Y[o] - sum / cnt)) : Y[o];
+      colors[y] = rowC; edge[y] = rowE; coverage[y] = rowV;
     }
+    return { colors: colors, edge: edge, coverage: coverage, cols: cols, rows: rows };
   }
-  var out = [];
-  for (y = 0; y < rows; y++){
-    var row = new Array(cols);
-    for (x = 0; x < cols; x++){
-      o = y * cols + x;
-      if (!ok[o]){ row[x] = null; continue; }
-      var yy = Y2[o], cb = Cb[o] - 128, cr = Cr[o] - 128;
-      row[x] = [
-        clamp255(yy + 1.402 * cr),
-        clamp255(yy - 0.344136 * cb - 0.714136 * cr),
-        clamp255(yy + 1.772 * cb)
-      ];
-    }
-    out.push(row);
-  }
-  return out;
-}
 
-/*
- * 色噪清理：把每格颜色拆成「亮度 Y + 色度 Cb/Cr」，只对色度做 3×3 中值。
- * 亮度（五官、轮廓、明暗）一格都不动，专治：
- *   - 灰/白区域里零星冒出粉点、绿点、蓝点
- *   - 黑发、暗部里冒出不相干的彩色
- * 这些都不是原图里的东西，是照片压缩噪点被色板"放大"成了完全不同色相。
- */
-function denoiseChroma(pixels, rows, cols, radius){
-  radius = radius || 1;
-  var n = rows * cols, x, y, o;
-  var Y = new Float32Array(n), Cb = new Float32Array(n), Cr = new Float32Array(n), ok = new Uint8Array(n);
-  for (y = 0; y < rows; y++){
-    for (x = 0; x < cols; x++){
-      var p = pixels[y][x];
-      o = y * cols + x;
+  /* ---------------- 匹配：Oklab 粗筛 + CIEDE2000 精排 ---------------- */
+  var SHORTLIST = 6;
+  function matchColor(rgb, pal, outCands) {
+    var ok = rgbToOklab(rgb[0], rgb[1], rgb[2]);
+    var bestIdx = new Array(SHORTLIST), bestD = new Array(SHORTLIST);
+    var n = 0, worst = Infinity;
+    for (var i = 0; i < pal.length; i++) {
+      var p = pal[i];
       if (!p) continue;
-      ok[o] = 1;
-      Y[o] = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
-      Cb[o] = 128 - 0.168736 * p[0] - 0.331264 * p[1] + 0.5 * p[2];
-      Cr[o] = 128 + 0.5 * p[0] - 0.418688 * p[1] - 0.081312 * p[2];
+      var d = oklabDistance(ok, p.oklab);
+      if (n < SHORTLIST) {
+        bestIdx[n] = i; bestD[n] = d; n++;
+        if (n === SHORTLIST) {
+          /* 插入排序一次，之后始终有序 */
+          for (var a = 1; a < n; a++) {
+            var ki = bestIdx[a], kd = bestD[a], j = a - 1;
+            while (j >= 0 && bestD[j] > kd) { bestIdx[j + 1] = bestIdx[j]; bestD[j + 1] = bestD[j]; j--; }
+            bestIdx[j + 1] = ki; bestD[j + 1] = kd;
+          }
+          worst = bestD[SHORTLIST - 1];
+        }
+      } else if (d < worst) {
+        var pos = SHORTLIST - 1;
+        while (pos > 0 && bestD[pos - 1] > d) { bestIdx[pos] = bestIdx[pos - 1]; bestD[pos] = bestD[pos - 1]; pos--; }
+        bestIdx[pos] = i; bestD[pos] = d;
+        worst = bestD[SHORTLIST - 1];
+      }
     }
+    var lab = rgbToLab(rgb[0], rgb[1], rgb[2]);
+    var bi = bestIdx[0], bd = Infinity, cands = [];
+    for (var k = 0; k < n; k++) {
+      var idx = bestIdx[k];
+      var de = deltaE2000(pal[idx].lab, lab);
+      cands.push([idx, de]);
+      if (de < bd) { bd = de; bi = idx; }
+    }
+    cands.sort(function (a, b) { return a[1] - b[1]; });
+    if (outCands) outCands.push(cands);
+    return bi;
   }
-  var nCb = new Float32Array(n), nCr = new Float32Array(n);
-  var bufB = [], bufR = [], dy, dx, k;
-  for (y = 0; y < rows; y++){
-    for (x = 0; x < cols; x++){
-      o = y * cols + x;
-      if (!ok[o]) continue;
-      bufB.length = 0; bufR.length = 0;
-      for (dy = -radius; dy <= radius; dy++){
-        for (dx = -radius; dx <= radius; dx++){
-          var ny = y + dy, nx = x + dx;
-          if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
-          var q = ny * cols + nx;
-          if (!ok[q]) continue;
-          bufB.push(Cb[q]); bufR.push(Cr[q]);
+
+  function nearPaletteColor(rgb, pal) {
+    var cands = [];
+    matchColor(rgb, pal, cands);
+    return cands.length && cands[0].length ? cands[0][0][0] : 0;
+  }
+
+  /* ---------------- 抖动（默认关闭） ---------------- */
+  /*
+   * 蛇形扫描 + 误差阻尼 + 逐通道比例钳制。
+   * 直接照搬 Floyd–Steinberg 在浅色区会抖出粗颗粒，阻尼后颗粒细很多。
+   */
+  function ditherCells(work, rows, cols, pal) {
+    var n = rows * cols;
+    var buf = new Float32Array(n * 3);
+    var active = new Uint8Array(n);
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < cols; x++) {
+        var c = work[y][x], o = y * cols + x;
+        if (!c) continue;
+        active[o] = 1;
+        buf[o * 3] = srgbToLinear(c[0]);
+        buf[o * 3 + 1] = srgbToLinear(c[1]);
+        buf[o * 3 + 2] = srgbToLinear(c[2]);
+      }
+    }
+    var out = new Array(rows);
+    for (var yy = 0; yy < rows; yy++) out[yy] = new Array(cols);
+    var DAMP = 0.75;
+    var add = function (x, y, er, eg, eb, f) {
+      if (x < 0 || x >= cols || y >= rows) return;
+      var o = y * cols + x;
+      if (!active[o]) return;
+      var i = o * 3;
+      buf[i] = Math.max(0, Math.min(1, buf[i] + er * f));
+      buf[i + 1] = Math.max(0, Math.min(1, buf[i + 1] + eg * f));
+      buf[i + 2] = Math.max(0, Math.min(1, buf[i + 2] + eb * f));
+    };
+    for (var row = 0; row < rows; row++) {
+      var dir = (row % 2 === 0) ? 1 : -1;
+      for (var step = 0; step < cols; step++) {
+        var cx = dir > 0 ? step : cols - 1 - step;
+        var ci = row * cols + cx;
+        var cell = work[row][cx];
+        if (!cell) { out[row][cx] = null; continue; }
+        var bi = ci * 3;
+        var old = [buf[bi], buf[bi + 1], buf[bi + 2]];
+        var srgb = [linearToSrgb(old[0]), linearToSrgb(old[1]), linearToSrgb(old[2])];
+        var k = nearPaletteColor(srgb, pal);
+        out[row][cx] = k;
+        var pc = pal[k].rgb;
+        var er = (old[0] - srgbToLinear(pc[0])) * DAMP;
+        var eg = (old[1] - srgbToLinear(pc[1])) * DAMP;
+        var eb = (old[2] - srgbToLinear(pc[2])) * DAMP;
+        add(cx + dir, row, er, eg, eb, 7 / 16);
+        add(cx - dir, row + 1, er, eg, eb, 3 / 16);
+        add(cx, row + 1, er, eg, eb, 5 / 16);
+        add(cx + dir, row + 1, er, eg, eb, 1 / 16);
+      }
+    }
+    return out;
+  }
+
+  /* ---------------- 邻域去斑：只压"平坦区孤点"，保边 ---------------- */
+  /*
+   * 数据项 = 与真实格心色的 CIEDE2000；
+   * 平滑项 = 与 8 邻域不同色的个数 × lambda。
+   * lambda 很小（默认 1），只有"改成一个邻居色能大幅降低色差"时才会改，
+   * 所以眼睛高光、细描边这类高对比细节不会被抹掉。
+   */
+  function smoothSpeckles(grid, work, pal, rows, cols, lambda, iters) {
+    var labs = new Array(rows);
+    for (var y = 0; y < rows; y++) {
+      labs[y] = new Array(cols);
+      for (var x = 0; x < cols; x++) {
+        var c = work[y][x];
+        labs[y][x] = c ? rgbToLab(c[0], c[1], c[2]) : null;
+      }
+    }
+    var g = grid.map(function (r) { return r.slice(); });
+    var cand = [];
+    for (var it = 0; it < iters; it++) {
+      var next = g.map(function (r) { return r.slice(); });
+      var changed = 0;
+      for (var yy = 0; yy < rows; yy++) {
+        for (var xx = 0; xx < cols; xx++) {
+          var cur = g[yy][xx];
+          if (cur === null || labs[yy][xx] === null) continue;
+          cand.length = 0;
+          cand.push(cur);
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              if (!dy && !dx) continue;
+              var ny = yy + dy, nx = xx + dx;
+              if (ny < 0 || nx < 0 || ny >= rows || nx >= cols) continue;
+              var v = g[ny][nx];
+              if (v !== null && cand.indexOf(v) < 0) cand.push(v);
+            }
+          }
+          var best = cur, bestE = Infinity;
+          for (var ci = 0; ci < cand.length; ci++) {
+            var idx = cand[ci];
+            var de = deltaE2000(pal[idx].lab, labs[yy][xx]);
+            var diff = 0;
+            for (var dy2 = -1; dy2 <= 1; dy2++) {
+              for (var dx2 = -1; dx2 <= 1; dx2++) {
+                if (!dy2 && !dx2) continue;
+                var ny2 = yy + dy2, nx2 = xx + dx2;
+                if (ny2 < 0 || nx2 < 0 || ny2 >= rows || nx2 >= cols) continue;
+                if (g[ny2][nx2] !== idx) diff++;
+              }
+            }
+            var E = de + lambda * diff;
+            if (E < bestE) { bestE = E; best = idx; }
+          }
+          if (best !== cur) { next[yy][xx] = best; changed++; }
         }
       }
-      bufB.sort(function(a, b){ return a - b; });
-      bufR.sort(function(a, b){ return a - b; });
-      nCb[o] = bufB[bufB.length >> 1];
-      nCr[o] = bufR[bufR.length >> 1];
+      g = next;
+      if (!changed) break;
     }
+    return g;
   }
-  var out = [];
-  for (y = 0; y < rows; y++){
-    var row = new Array(cols);
-    for (x = 0; x < cols; x++){
-      o = y * cols + x;
-      if (!ok[o]){ row[x] = null; continue; }
-      var yy = Y[o], cb = nCb[o] - 128, cr = nCr[o] - 128;
-      row[x] = [
-        clamp255(yy + 1.402 * cr),
-        clamp255(yy - 0.344136 * cb - 0.714136 * cr),
-        clamp255(yy + 1.772 * cb)
-      ];
-    }
-    out.push(row);
-  }
-  return out;
-}
 
-/* 重新统计每色用量 */
-function recountGrid(grid, paletteLen){
-  var counts = new Array(paletteLen).fill(0);
-  for (var y = 0; y < grid.length; y++){
-    for (var x = 0; x < grid[y].length; x++){
-      var v = grid[y][x];
-      if (v !== null) counts[v]++;
+  /* ---------------- 限制总用色数（"颜色精简"） ---------------- */
+  function limitColors(grid, pal, rows, cols, maxColors) {
+    var counts = new Array(pal.length).fill(0);
+    var i, y, x;
+    for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) { var v = grid[y][x]; if (v !== null) counts[v]++; }
+    var used = [];
+    for (i = 0; i < counts.length; i++) if (counts[i]) used.push(i);
+    if (used.length <= maxColors) return { grid: grid, counts: counts };
+    var pairDist = {};
+    for (i = 0; i < used.length; i++) {
+      for (var j = i + 1; j < used.length; j++) {
+        pairDist[used[i] + ":" + used[j]] = deltaE2000(pal[used[i]].lab, pal[used[j]].lab);
+      }
     }
-  }
-  return counts;
-}
-
-/*
- * 去杂色：把零散的单颗/小簇并到周围占多数的那种豆子。
- * 判据刻意保守——只有"自己这一色在 8 邻格里出现不超过 1 次、且有别的颜色占了 5 格以上"
- * 才改。这样 1 格宽的描边、线条不会被吃掉（它们在邻格里至少还有 2 个同伴）。
- */
-function despeckleGrid(grid, rows, cols, passes){
-  var g = grid.map(function(r){ return r.slice(); });
-  for (var p = 0; p < passes; p++){
-    var next = g.map(function(r){ return r.slice(); });
-    for (var y = 0; y < rows; y++){
-      for (var x = 0; x < cols; x++){
-        var cur = g[y][x];
-        if (cur === null) continue;
-        /* 只看上下左右四邻：四邻里只要还有一个同色，就算"有线连着"，不动它。
-           这样 1 格宽的描边、短线、文字笔画都不会被一点点啃掉。 */
-        var n4 = [];
-        if (x > 0) n4.push(g[y][x - 1]);
-        if (x < cols - 1) n4.push(g[y][x + 1]);
-        if (y > 0) n4.push(g[y - 1][x]);
-        if (y < rows - 1) n4.push(g[y + 1][x]);
-        var tally = {}, same = 0, best = -1, bestN = 0, i4;
-        for (i4 = 0; i4 < n4.length; i4++){
-          var v = n4[i4];
-          if (v === null) continue;
-          if (v === cur){ same++; continue; }
-          tally[v] = (tally[v] || 0) + 1;
-          if (tally[v] > bestN){ bestN = tally[v]; best = v; }
+    var active = {};
+    for (i = 0; i < used.length; i++) active[used[i]] = true;
+    var activeCount = used.length;
+    var mergeMap = {};
+    while (activeCount > maxColors) {
+      var bestA = -1, bestB = -1, bestD = Infinity;
+      for (i = 0; i < used.length; i++) {
+        var a = used[i]; if (!active[a]) continue;
+        for (var j2 = i + 1; j2 < used.length; j2++) {
+          var b = used[j2]; if (!active[b]) continue;
+          var d = pairDist[a + ":" + b];
+          if (d < bestD) { bestD = d; bestA = a; bestB = b; }
         }
-        if (same === 0 && bestN >= 2) next[y][x] = best;
       }
+      if (bestA < 0) break;
+      /* 用色多的当代表色，用色少的并进去 */
+      var keep = counts[bestA] >= counts[bestB] ? bestA : bestB;
+      var drop = keep === bestA ? bestB : bestA;
+      var rep = mergeMap[keep] !== undefined ? mergeMap[keep] : keep;
+      mergeMap[drop] = rep;
+      counts[rep] += counts[drop];
+      counts[drop] = 0;
+      active[drop] = false;
+      activeCount--;
     }
-    g = next;
-  }
-  return g;
-}
-
-/*
- * 相近色合并：按用量从多到少扫一遍，用色少的如果和某个用色多的颜色足够接近，
- * 就整体并过去。大色块里的"深浅不一"就是靠这步压平的（脸部、衣服最常见）。
- */
-function mergeSimilarColors(grid, counts, palette, thresh){
-  var used = [];
-  for (var i = 0; i < counts.length; i++) if (counts[i] > 0) used.push(i);
-  used.sort(function(a, b){ return counts[b] - counts[a]; });
-  var map = {}, kept = [], k, q;
-  for (k = 0; k < used.length; k++){
-    var idx = used[k], target = -1, bestD = Infinity;
-    for (q = 0; q < kept.length; q++){
-      /* labDist 返回的是平方距离，这里要的是真实色差，开个根 */
-      var d = Math.sqrt(labDist(palette[idx].lab, palette[kept[q]].lab));
-      if (d < bestD){ bestD = d; target = kept[q]; }
-    }
-    var doMerge = false;
-    if (target >= 0){
-      if (bestD <= thresh) doMerge = true;
-    }
-    if (doMerge) map[idx] = target;
-    else { kept.push(idx); map[idx] = idx; }
-  }
-  return grid.map(function(row){
-    return row.map(function(v){ return v === null ? null : map[v]; });
-  });
-}
-
-/*
- * 色相离群清理：只处理「明度和某个主色几乎一样、但色相跑偏、用量又只有零头」的颜色。
- * 典型就是暖灰皮肤里那几块偏紫的同亮度格子——它和皮肤主色明度一样，只是色相不对，
- * 换成人眼看就是"这儿怎么冒出一块紫的"。这类必须清掉，但它不是"合并相近色"，
- * 所以任何精简档位（包括关闭）都要做。真正有明暗差别的颜色不受影响。
- */
-function mergeHueOutliers(grid, counts, palette, maxDL, ratio, maxDE){
-  var used = [], i, k, q;
-  for (i = 0; i < counts.length; i++) if (counts[i] > 0) used.push(i);
-  used.sort(function(a, b){ return counts[b] - counts[a]; });
-  var map = {}, kept = [];
-  for (k = 0; k < used.length; k++){
-    var idx = used[k], target = -1, bestD = Infinity;
-    for (q = 0; q < kept.length; q++){
-      var d = Math.sqrt(labDist(palette[idx].lab, palette[kept[q]].lab));
-      if (d < bestD){ bestD = d; target = kept[q]; }
-    }
-    var doMerge = false;
-    if (target >= 0 && bestD <= maxDE){
-      var dL = Math.abs(palette[idx].lab[0] - palette[target].lab[0]);
-      if (dL <= maxDL && counts[target] >= counts[idx] * ratio) doMerge = true;
-    }
-    if (doMerge) map[idx] = target;
-    else { kept.push(idx); map[idx] = idx; }
-  }
-  return grid.map(function(row){
-    return row.map(function(v){ return v === null ? null : map[v]; });
-  });
-}
-
-/*
- * 区域统一（治"大片背景被劈成两个颜色"）：
- * 有时候原图一个纯色块，正好卡在色板两个颜色的正中间（比如浅蓝卡在 C4 和 C13 中间），
- * 一点点噪点就会让格子五五开地跳到两边，看起来就是一片花。
- * 解决办法是按"原图像素颜色"把画面切成一块块区域（不看量化结果，所以不会被劈开），
- * 每块区域取平均色，重新配一个最接近的色板色，整块统一。
- * 太小的区域（细节、描边、抗锯齿过渡）不动。
- */
-function unifyRegions(grid, pixels, rows, cols, palette, tol, minCells, maxSpread){
-  var n = rows * cols, seen = new Uint8Array(n), i, k;
-  var out = grid.map(function(r){ return r.slice(); });
-  var lab = new Array(n);
-  for (i = 0; i < n; i++){
-    var py0 = Math.floor(i / cols), px0 = i % cols, c0 = pixels[py0][px0];
-    lab[i] = c0 ? srgbToLab(c0[0], c0[1], c0[2]) : null;
-  }
-  var stack = [], members = [];
-  for (var s = 0; s < n; s++){
-    if (seen[s]) continue;
-    seen[s] = 1;
-    if (!lab[s]) continue;
-    var seed = lab[s];
-    members.length = 0;
-    stack.length = 0;
-    stack.push(s);
-    while (stack.length){
-      var p = stack.pop();
-      members.push(p);
-      var py = Math.floor(p / cols), px = p % cols, nbr = [];
-      if (px > 0) nbr.push(p - 1);
-      if (px < cols - 1) nbr.push(p + 1);
-      if (py > 0) nbr.push(p - cols);
-      if (py < rows - 1) nbr.push(p + cols);
-      for (k = 0; k < nbr.length; k++){
-        var q = nbr[k];
-        if (seen[q]) continue;
-        var lq = lab[q];
-        if (!lq){ seen[q] = 1; continue; }
-        if (Math.sqrt(labDist(lq, seed)) <= tol){ seen[q] = 1; stack.push(q); }
+    var out = new Array(rows), outCounts = new Array(pal.length).fill(0);
+    for (y = 0; y < rows; y++) {
+      var row = new Array(cols);
+      for (x = 0; x < cols; x++) {
+        var val = grid[y][x];
+        if (val === null) { row[x] = null; continue; }
+        while (mergeMap[val] !== undefined) val = mergeMap[val];
+        row[x] = val;
+        outCounts[val]++;
       }
+      out[y] = row;
     }
-    if (members.length < minCells) continue;
-    var sr = 0, sg = 0, sb = 0, cnt = 0;
-    for (i = 0; i < members.length; i++){
-      var my = Math.floor(members[i] / cols), mx = members[i] % cols, pc = pixels[my][mx];
-      if (!pc) continue;
-      sr += pc[0]; sg += pc[1]; sb += pc[2]; cnt++;
-    }
-    if (!cnt) continue;
-    /* 只有"真正均匀"的块才统一：如果块内本身有明暗过渡（照片的立体感），
-       强行压成一个颜色会把形体和光影全抹掉，那就跳过。
-       用 90% 分位而不是最大值——容得下少数几颗离群色，但整片渐变仍会判为不均匀。 */
-    if (maxSpread){
-      var mr = sr / cnt, mg = sg / cnt, mb = sb / cnt;
-      var meanLab = srgbToLab(mr, mg, mb), spread = 0;
-      var dists = [];
-      for (i = 0; i < members.length; i++){
-        dists.push(Math.sqrt(labDist(lab[members[i]], meanLab)));
+    return { grid: out, counts: outCounts };
+  }
+
+  /* ---------------- 转换主流程 ---------------- */
+  function convertCells(sample, cols, rows, palette, opts) {
+    opts = opts || {};
+    var pal = compilePalette(palette);
+    var adj = opts.adj || { bright: 0, contrast: 0, sat: 0 };
+    var removeBg = !!opts.removeBg;
+    var bgThresh = opts.bgThresh != null ? opts.bgThresh : 242;
+    var edgeLevel = opts.edge || 0;
+    var dither = !!opts.dither;
+    var maxColors = opts.maxColors || 0;
+    var lambda = opts.lambda != null ? opts.lambda : 1;
+    var iters = opts.iters != null ? opts.iters : 2;
+
+    var edgeInfo = sample.edge;
+    var work = new Array(rows);
+    for (var y = 0; y < rows; y++) {
+      var row = new Array(cols);
+      for (var x = 0; x < cols; x++) {
+        var c = adjustColor(sample.colors[y][x], adj);
+        if (removeBg && srgbLuma(c[0], c[1], c[2]) >= bgThresh) { row[x] = null; continue; }
+        if (edgeLevel > 0 && edgeInfo && edgeInfo[y][x]) {
+          var e = edgeInfo[y][x];
+          var avgL = srgbLuma(c[0], c[1], c[2]);
+          var domL = srgbLuma(e.rgb[0], e.rgb[1], e.rgb[2]);
+          /* 细线：格子里只要有一小片接近黑色的像素，就按线色落豆。
+             只在"亮底上的暗线"（avgL 够亮）才触发，避免把暗部整片压黑。 */
+          var needDark = edgeLevel >= 2 ? 0.10 : 0.45;
+          if (avgL >= 110 && e.range >= 60 && e.darkShare >= needDark && e.darkRgb) {
+            c = [e.darkRgb[0] | 0, e.darkRgb[1] | 0, e.darkRgb[2] | 0];
+          } else {
+            /* 粗描边 / 大色块：主色明显比平均色深时取主色 */
+            var lim = edgeLevel >= 2
+              ? { range: 90, share: 0.30, drop: 24 }
+              : { range: 120, share: 0.50, drop: 28 };
+            if (e.range >= lim.range && e.share >= lim.share && domL <= avgL - lim.drop) {
+              c = [e.rgb[0], e.rgb[1], e.rgb[2]];
+            }
+          }
+        }
+        row[x] = c;
       }
-      dists.sort(function(a, b){ return a - b; });
-      spread = dists[Math.min(dists.length - 1, Math.floor(dists.length * 0.9))];
-      if (spread > maxSpread) continue;
+      work[y] = row;
     }
-    var idx = matchColor(sr / cnt, sg / cnt, sb / cnt, palette);
-    for (i = 0; i < members.length; i++){
-      out[Math.floor(members[i] / cols)][members[i] % cols] = idx;
+
+    var grid, counts = new Array(pal.length).fill(0);
+    if (dither) {
+      grid = ditherCells(work, rows, cols, pal);
+    } else {
+      grid = new Array(rows);
+      for (y = 0; y < rows; y++) {
+        var grow = new Array(cols);
+        for (x = 0; x < cols; x++) {
+          grow[x] = work[y][x] ? matchColor(work[y][x], pal) : null;
+        }
+        grid[y] = grow;
+      }
+      if (lambda > 0) grid = smoothSpeckles(grid, work, pal, rows, cols, lambda, iters);
     }
+
+    if (maxColors > 0) {
+      var limited = limitColors(grid, pal, rows, cols, maxColors);
+      grid = limited.grid; counts = limited.counts;
+    } else {
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) { if (grid[y][x] !== null) counts[grid[y][x]]++; }
+    }
+
+    var total = 0, used = 0;
+    for (var i = 0; i < counts.length; i++) if (counts[i]) { total += counts[i]; used++; }
+    return { grid: grid, counts: counts, totalBeads: total, usedColors: used, palette: pal };
   }
-  return out;
-}
-/* 列标注：0->A 25->Z 26->AA */
-function colLabel(i){
-  var s = "";
-  i = i + 1;
-  while (i > 0){
-    i--;
-    s = String.fromCharCode(65 + (i % 26)) + s;
-    i = Math.floor(i / 26);
+
+  /* ---------------- CSV / 工程文件 ---------------- */
+  function colLabel(i) {
+    var s = "";
+    i = i + 1;
+    while (i > 0) { i--; s = String.fromCharCode(65 + (i % 26)) + s; i = Math.floor(i / 26); }
+    return s;
   }
-  return s;
-}
-/* 拼豆 App / Excel 都吃得下的 CSV：空豆留空 */
-function cellText(idx, palette, mode){
-  if (idx === null || idx === undefined) return "";
-  var p = palette[idx];
-  if (mode === "idx") return String(idx + 1);
-  if (mode === "name") return p.name || p.hex;
-  return p.hex;
-}
-/* 图纸格子里印的短色号：编号 或 色卡名（如 A14） */
-function cellCode(idx, palette, mode){
-  if (idx === null || idx === undefined || !mode) return "";
-  var p = palette[idx];
-  if (!p) return "";
-  return mode === "idx" ? String(idx + 1) : (p.name || "");
-}
-function gridToCSV(grid, palette, mode){
-  var lines = [];
-  for (var i = 0; i < grid.length; i++){
-    var row = [];
-    for (var j = 0; j < grid[i].length; j++) row.push(cellText(grid[i][j], palette, mode));
-    lines.push(row.join(","));
+  function cellText(idx, palette, mode) {
+    if (idx === null || idx === undefined) return "";
+    var p = palette[idx];
+    if (!p) return "";
+    if (mode === "idx") return String(idx + 1);
+    if (mode === "name") return p.name || p.hex;
+    return p.hex;
   }
-  return "\uFEFF" + lines.join("\r\n") + "\r\n";
-}
-function countsToCSV(counts, palette){
-  var lines = [["色号","色名","HEX","R","G","B","用量(颗)"].join(",")];
-  for (var i = 0; i < counts.length; i++){
-    if (!counts[i]) continue;
-    var p = palette[i];
-    lines.push([i+1, p.name || "", p.hex, p.rgb[0], p.rgb[1], p.rgb[2], counts[i]].join(","));
+  function cellCode(idx, palette, mode) {
+    if (idx === null || idx === undefined || !mode) return "";
+    var p = palette[idx];
+    if (!p) return "";
+    return mode === "idx" ? String(idx + 1) : (p.name || "");
   }
-  return "\uFEFF" + lines.join("\r\n") + "\r\n";
-}
-/* 工程文件：保留整张豆图 + 色板，方便以后再打开或二次加工 */
-function buildProject(state){
-  var used = [], map = {}, i;
-  for (i = 0; i < state.palette.length; i++){ map[i] = -1; }
-  state.palette.forEach(function(p, idx){
-    if (!state.counts[idx]) return;
-    map[idx] = used.length;
-    used.push({ name: p.name, hex: p.hex, rgb: p.rgb, count: state.counts[idx] });
-  });
-  var grid = state.grid.map(function(row){
-    return row.map(function(v){ return v === null ? -1 : map[v]; });
-  });
+  function gridToCSV(grid, palette, mode) {
+    var lines = [];
+    for (var i = 0; i < grid.length; i++) {
+      var row = [];
+      for (var j = 0; j < grid[i].length; j++) row.push(cellText(grid[i][j], palette, mode));
+      lines.push(row.join(","));
+    }
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
+  }
+  function countsToCSV(counts, palette) {
+    var lines = [["色号", "色名", "HEX", "R", "G", "B", "用量(颗)"].join(",")];
+    for (var i = 0; i < counts.length; i++) {
+      if (!counts[i]) continue;
+      var p = palette[i];
+      if (!p) continue;
+      lines.push([i + 1, p.name || "", p.hex, p.rgb[0], p.rgb[1], p.rgb[2], counts[i]].join(","));
+    }
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
+  }
+  function buildProject(state) {
+    var used = [], map = {}, i;
+    for (i = 0; i < state.palette.length; i++) map[i] = -1;
+    state.palette.forEach(function (p, idx) {
+      if (!state.counts[idx]) return;
+      map[idx] = used.length;
+      used.push({ name: p.name, hex: p.hex, rgb: p.rgb, count: state.counts[idx] });
+    });
+    var grid = state.grid.map(function (row) {
+      return row.map(function (v) { return v === null ? -1 : map[v]; });
+    });
+    return {
+      format: "pindou-pattern",
+      version: 2,
+      cols: state.cols,
+      rows: state.rows,
+      totalBeads: state.totalBeads,
+      colorCount: used.length,
+      palette: used,
+      grid: grid,
+      algorithm: "v15 linear-light sampling + Oklab/CIEDE2000 matching",
+      note: "grid 中 -1 表示空豆（不拼），其余数字是 palette 的下标"
+    };
+  }
+
   return {
-    format: "pindou-pattern",
-    version: 1,
-    cols: state.cols,
-    rows: state.rows,
-    totalBeads: state.totalBeads,
-    colorCount: used.length,
-    palette: used,
-    grid: grid,
-    note: "grid 中 -1 表示空豆（不拼），其余数字是 palette 的下标"
+    version: "15",
+    // 颜色数学
+    hexToRgb: hexToRgb,
+    rgbToHex: rgbToHex,
+    srgbToLinear: srgbToLinear,
+    linearToSrgb: linearToSrgb,
+    srgbLuma: srgbLuma,
+    rgbToOklab: rgbToOklab,
+    oklabToRgb: oklabToRgb,
+    oklabDistance: oklabDistance,
+    rgbToLab: rgbToLab,
+    deltaE2000: deltaE2000,
+    adjustColor: adjustColor,
+    // 色卡
+    compilePalette: compilePalette,
+    parsePaletteText: parsePaletteText,
+    // 流程
+    sampleCells: sampleCells,
+    convertCells: convertCells,
+    // 导出
+    colLabel: colLabel,
+    cellText: cellText,
+    cellCode: cellCode,
+    gridToCSV: gridToCSV,
+    countsToCSV: countsToCSV,
+    buildProject: buildProject
   };
-}
-/* 解析用户粘贴的色卡文本 */
-function parsePaletteText(text){
-  var lines = String(text || "").split(/\r?\n/);
-  var out = [];
-  var isHex = function(s){ return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s); };
-  var isNum = function(s){ return /^-?\d+(\.\d+)?$/.test(s); };
-  for (var i = 0; i < lines.length; i++){
-    var line = lines[i].trim();
-    if (!line) continue;
-    if (line.charAt(0) === "#" && !isHex(line)) continue;
-    var name = null, rgb = null;
-    var parts = line.split(/[,\uFF0C;\t]+/).map(function(s){ return s.trim(); }).filter(Boolean);
-    if (parts.length >= 1 && isHex(parts[0])){
-      rgb = hexToRgb(parts[0]);
-      name = parts.length > 1 ? parts[1] : parts[0];
-    } else if (parts.length >= 2 && isHex(parts[1])){
-      rgb = hexToRgb(parts[1]);
-      name = parts[0];
-    } else if (parts.length >= 4 && isNum(parts[1]) && isNum(parts[2]) && isNum(parts[3])){
-      rgb = [parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])];
-      name = parts[0];
-    } else if (parts.length >= 3 && isNum(parts[0]) && isNum(parts[1]) && isNum(parts[2])){
-      rgb = [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])];
-      name = parts.length > 3 ? parts[3] : rgbToHex(rgb[0], rgb[1], rgb[2]);
-    }
-    if (!rgb) continue;
-    if (rgb.some(function(v){ return v < 0 || v > 255; })) continue;
-    rgb = [Math.round(rgb[0]), Math.round(rgb[1]), Math.round(rgb[2])];
-    out.push({ name: name, hex: rgbToHex(rgb[0], rgb[1], rgb[2]), rgb: rgb, lab: srgbToLab(rgb[0], rgb[1], rgb[2]) });
-  }
-  if (out.length === 0) throw new Error("没认出任何颜色，请检查格式");
-  return out;
-}
-function makePalette(list){
-  return list.map(function(item){
-    var rgb = hexToRgb(item[1]);
-    return { name: item[0], hex: rgbToHex(rgb[0], rgb[1], rgb[2]), rgb: rgb, lab: srgbToLab(rgb[0], rgb[1], rgb[2]) };
-  });
-}
-function hslToRgb(h, s, l){
-  h = ((h % 360) + 360) % 360;
-  var c = (1 - Math.abs(2 * l - 1)) * s;
-  var hp = h / 60;
-  var x = c * (1 - Math.abs((hp % 2) - 1));
-  var m = l - c / 2;
-  var r = 0, g = 0, b = 0;
-  if (hp < 1) { r = c; g = x; }
-  else if (hp < 2) { r = x; g = c; }
-  else if (hp < 3) { g = c; b = x; }
-  else if (hp < 4) { g = x; b = c; }
-  else if (hp < 5) { r = x; b = c; }
-  else { r = c; b = x; }
-  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-}
-var HUE5 = [
-  "红","红","橙红","橙红","橙","橙","橙","橙黄","橙黄","橙黄","黄","黄","黄","黄绿","黄绿","黄绿",
-  "草绿","草绿","绿","绿","绿","绿","苹果绿","苹果绿","青绿","青绿","薄荷","薄荷","碧青","碧青",
-  "青","青","湖蓝","湖蓝","天蓝","天蓝","天蓝","天蓝","蓝","蓝","蓝","蓝","宝蓝","宝蓝",
-  "靛蓝","靛蓝","靛蓝","靛蓝","紫","紫","紫","紫罗兰","紫罗兰","紫","紫","紫","紫红","紫红",
-  "玫红","玫红","玫红","玫红","桃红","桃红","樱红","樱红","樱红","樱红","樱红","樱红","红","红"
-];
-/*
- * 通用大色板
- * 结构：灰阶 16 + 低饱和灰调 12 + 肤色/棕 12 + 色相 48 × 8 档 = 424
- *
- * 48 个色相（7.5° 一档）× 8 档「明度 × 饱和度」组合，这 8 档是在 Lab 色差空间里
- * 用搜索程序调出来的（见 work/optimize/tiers.js），目标是让整块色板离真实图片
- * 颜色的距离最小。相比原来只有深/中/淡三档的色板，平均色差几乎减半。
- *
- * 这件事很关键：色板够不着某个颜色时，平滑模式会硬拉到最近的饱和色或灰白上
- * （浅蓝背景被配成深蓝），抖动模式则会拿白色去掺（满屏白点）。两件事同源。
- */
-function buildMainPalette(){
-  var list = [];
-  var used = {};
-  var gray = [
-    ["白","#FFFFFF"],["暖白","#F9F7F2"],["米白","#F2EFE6"],["浅灰白","#E8E8E2"],
-    ["极浅灰","#DADAD4"],["浅灰","#CBCBC4"],["中浅灰","#BABAB2"],["灰","#A8A8A0"],
-    ["中灰","#94948C"],["深灰","#808078"],["暗灰","#6A6A64"],["炭灰","#525250"],
-    ["深炭","#3C3C3A"],["墨灰","#2A2A28"],["近黑","#1A1A19"],["黑","#0A0A0A"]
-  ];
-  var muted = [
-    ["灰蓝","#7A8AA8"],["雾蓝","#9FB4C8"],["钢蓝","#607090"],["青灰","#8AA8A0"],
-    ["鼠尾草","#A8B8A0"],["豆绿","#9FB890"],["橄榄","#8A8A5A"],["藕荷","#C8B8C8"],
-    ["烟灰紫","#9A8CB8"],["灰粉","#D8B8B8"],["米咖","#B0A090"],["砖灰","#A08878"]
-  ];
-  var skin = [
-    ["浅肤","#F7DDC0"],["肤色","#F2C9A0"],["深肤","#E8B48A"],["小麦","#D9A06E"],
-    ["浅棕","#B08754"],["棕","#8A5A30"],["深棕","#5E3B1E"],["咖啡","#4A2F18"],
-    ["巧克力","#6B4423"],["驼色","#B08A5A"],["卡其","#C8B27A"],["米色","#E8D8B8"]
-  ];
-  gray.forEach(function(c){ list.push(c); });
-  muted.forEach(function(c){ list.push(c); });
-  skin.forEach(function(c){ list.push(c); });
-  /* 色相 48 档（7.5° 一档）× 8 个明度/饱和度档：[饱和度, 明度, 命名前缀] */
-  var TONES = [
-    [0.50, 0.36, "深"],
-    [0.68, 0.52, "中"],
-    [0.53, 0.54, "柔"],
-    [0.89, 0.55, "正"],
-    [0.78, 0.73, "亮"],
-    [0.64, 0.75, "浅"],
-    [0.49, 0.79, "极浅"],
-    [0.86, 0.93, "淡"]
-  ];
-  var HUES = 48;
-  for (var i = 0; i < HUES; i++){
-    var h = i * (360 / HUES);
-    var base = HUE5[Math.round(h / 5) % 72];
-    for (var t = 0; t < TONES.length; t++){
-      var rgb = hslToRgb(h, TONES[t][0], TONES[t][1]);
-      var name = TONES[t][2] + base;
-      if (used[name]) { used[name]++; name = name + used[name]; } else { used[name] = 1; }
-      list.push([name, rgbToHex(rgb[0], rgb[1], rgb[2])]);
-    }
-  }
-  return makePalette(list);
-}
-var PALETTES = {
-  common256: buildMainPalette(),
-  /* 大嘴巴拼豆 221 色现货色号（色值取自官方色卡的逐格取色） */
-  dbk221: makePalette([
-    ["A1","#F1E7A9"],["A2","#E5E3AB"],["A3","#F7E368"],["A4","#F8D912"],["A5","#FBC40C"],["A6","#F2B52E"],
-    ["A7","#F7790A"],["A8","#E1C127"],["A9","#F49633"],["A10","#F48F3F"],["A11","#F8CB85"],["A12","#F8B291"],
-    ["A13","#F6B33A"],["A14","#F55219"],["A15","#F5E453"],["A16","#F6ED90"],["A17","#F9CA5E"],["A18","#F8B971"],
-    ["A19","#F77F6D"],["A20","#F5CD67"],["A21","#F6C562"],["A22","#F4D687"],["A23","#EBD499"],["A24","#EBCFAB"],
-    ["A25","#EDE1AF"],["A26","#E1B34D"],["B1","#D8DA22"],["B2","#A2C624"],["B3","#8DC98B"],["B4","#5FC74B"],
-    ["B5","#62A243"],["B6","#5ACD9C"],["B7","#0AAE8F"],["B8","#078A43"],["B9","#094635"],["B10","#A9DBC8"],
-    ["B11","#6E853C"],["B12","#0F6A47"],["B13","#C8E384"],["B14","#C6E33C"],["B15","#116333"],["B16","#C3DE9D"],
-    ["B17","#9EB429"],["B18","#D7DC6B"],["B19","#43C897"],["B20","#B6E2C1"],["B21","#43949C"],["B22","#14777A"],
-    ["B23","#475250"],["B24","#7D826E"],["B25","#CCD7AE"],["B26","#7F988E"],["B27","#B19A5A"],["B28","#BAC7A9"],
-    ["B29","#84C69C"],["B30","#92AF5C"],["B31","#A4AC7F"],["B32","#788762"],["C1","#D8E4CC"],["C2","#B7E4E8"],
-    ["C3","#B7DFE6"],["C4","#8BD7EC"],["C5","#08B8C4"],["C6","#7AB2D8"],["C7","#457ABE"],["C8","#0771C2"],
-    ["C9","#3B5FC1"],["C10","#27ADC9"],["C11","#12A4AC"],["C12","#374661"],["C13","#BFD1E0"],["C14","#D5EAE4"],
-    ["C15","#19B2B1"],["C16","#316CA5"],["C17","#67C2D1"],["C18","#45546B"],["C19","#2C8CA0"],["C20","#2089B8"],
-    ["C21","#C5D3DD"],["C22","#9ABFC2"],["C23","#8FBEC0"],["C24","#A6BFCB"],["C25","#7EC0D4"],["C26","#82CAC0"],
-    ["C27","#33A8C2"],["C28","#D3DBDE"],["C29","#97A4B6"],["D1","#A6AFE9"],["D2","#7C87C0"],["D3","#2A4B97"],
-    ["D4","#293C77"],["D5","#B34EBA"],["D6","#997DBD"],["D7","#663D84"],["D8","#E0D2F1"],["D9","#C7BAE4"],
-    ["D10","#402D55"],["D11","#C1C2E6"],["D12","#D69ED2"],["D13","#AD1991"],["D14","#7A268A"],["D15","#483585"],
-    ["D16","#D7D5E3"],["D17","#C6CDED"],["D18","#A868BF"],["D19","#DFCDDB"],["D20","#AC62BD"],["D21","#952D90"],
-    ["D22","#775594"],["D23","#8F8CA8"],["D24","#C6C2DE"],["D25","#9096C9"],["D26","#5563BE"],["E1","#FDDEDE"],
-    ["E2","#FAC5DF"],["E3","#F7A1BA"],["E4","#EA7AAA"],["E5","#F267AB"],["E6","#F84C78"],["E7","#B22064"],
-    ["E8","#F8D8DF"],["E9","#E776C2"],["E10","#CB2E7E"],["E11","#F1D6CD"],["E12","#F79FD0"],["E13","#B70966"],
-    ["E14","#F8D1B9"],["E15","#E6C4C1"],["E16","#EDD4CD"],["E17","#F2D5DA"],["E18","#F2B7C5"],["E19","#F4D1E0"],
-    ["E20","#EACFDA"],["E21","#D3A6A6"],["E22","#D190A1"],["E23","#BF879F"],["E24","#C7A2B5"],["F1","#FC9967"],
-    ["F2","#F25252"],["F3","#E53E2E"],["F4","#E72330"],["F5","#BE0814"],["F6","#A84937"],["F7","#7A1434"],
-    ["F8","#BA1A35"],["F9","#E27588"],["F10","#8D441E"],["F11","#73353F"],["F12","#F1445F"],["F13","#DC5642"],
-    ["F14","#F3A796"],["F15","#CE1B2B"],["F16","#F1C2B5"],["F17","#EFA595"],["F18","#E49681"],["F19","#BF4B54"],
-    ["F20","#D2AC9C"],["F21","#E1B1AE"],["F22","#EBAEAD"],["F23","#ED9E8B"],["F24","#EF9183"],["F25","#ED9B9C"],
-    ["G1","#F5D8C4"],["G2","#FBC198"],["G3","#E5B596"],["G4","#D1A27E"],["G5","#E79B6D"],["G6","#EC7444"],
-    ["G7","#9C5C3B"],["G8","#603936"],["G9","#E8B374"],["G10","#CE933B"],["G11","#D3C097"],["G12","#CA9D69"],
-    ["G13","#A86E4E"],["G14","#956953"],["G15","#EBDCC4"],["G16","#E8D3C2"],["G17","#655555"],["G18","#EED7B3"],
-    ["G19","#E79351"],["G20","#BC613D"],["G21","#CB9181"],["H1","#FBF8FB"],["H2","#FBFCFA"],["H3","#B0AFB2"],
-    ["H4","#777679"],["H5","#434441"],["H6","#4C4A48"],["H7","#090603"],["H8","#E7D6DA"],["H9","#DDDDDD"],
-    ["H10","#D4C9CD"],["H11","#C8C5C6"],["H12","#EBE3D3"],["H13","#ECDEC2"],["H14","#C1C0C0"],["H15","#999BA6"],
-    ["H16","#474647"],["H17","#DBD9D5"],["H18","#EEE9D3"],["H19","#E7E0CF"],["H20","#AFABAB"],["H21","#DFD5C5"],
-    ["H22","#CDC5C4"],["H23","#B2B1A9"],["M1","#D4D9D3"],["M2","#7D8977"],["M3","#67757B"],["M4","#D0C0B5"],
-    ["M5","#CBC8A3"],["M6","#C0B293"],["M7","#B5A29E"],["M8","#AB7D71"],["M9","#B79C81"],["M10","#B2A0AA"],
-    ["M11","#A58A9A"],["M12","#665052"],["M13","#D4977B"],["M14","#C66F63"],["M15","#797979"]
-  ]),
-  common96: makePalette([
-    ["白","#FFFFFF"],["暖白","#F9F5EC"],["米白","#F2EBDD"],["浅灰","#D9D9D9"],
-    ["中灰","#BFBFBF"],["灰","#A6A6A6"],["深灰","#8C8C8C"],["炭灰","#595959"],
-    ["黑","#262626"],["银灰","#C0C4CC"],
-    ["樱花粉","#FFE3EC"],["浅粉","#FBD9E5"],["粉","#F5B8CB"],["桃粉","#F49CB5"],
-    ["玫瑰","#E896A0"],["玫粉","#E87E9F"],["深玫","#C75074"],["西瓜红","#F2648C"],
-    ["浅红","#F06B6B"],["亮红","#FF3131"],["红","#D62F2F"],["深红","#B01717"],["酒红","#7A1F33"],
-    ["砖红","#A8432A"],["红棕","#8C4A38"],
-    ["浅橙","#FFC08A"],["蜜橙","#FFB066"],["橙","#F28C28"],["深橙","#E36F1E"],
-    ["橘红","#E85C2A"],["桃橙","#F7A06B"],["杏黄","#F2B35E"],["橘","#F58F3E"],
-    ["奶油","#FFF3CC"],["浅黄","#FBF3AE"],["柠檬黄","#F7E94E"],["黄","#FFD82E"],
-    ["金黄","#F2B705"],["深黄","#D99A12"],["土黄","#C99B3F"],["芥末黄","#BFA63E"],
-    ["黄绿","#A8C84A"],["青柠","#C8E84A"],["草绿","#7CB83C"],["绿","#3FA033"],
-    ["深绿","#21702C"],["墨绿","#165225"],["橄榄","#6E7A2A"],["浅绿","#C9E8A8"],
-    ["薄荷","#A6E3C5"],["薄荷绿","#7FD4B0"],["翡翠","#2FA36B"],["森林绿","#1E6B4A"],
-    ["鼠尾草","#A8B8A0"],["鸭绿","#A0D8C0"],
-    ["浅青","#C4ECEC"],["青","#35C8C8"],["深青","#1F9A9A"],["湖水蓝","#88D8D0"],
-    ["浅蓝","#C4E0F5"],["天蓝","#7FC8F0"],["湖蓝","#5AA8E8"],["中蓝","#4A8AD8"],
-    ["蓝","#3A6FD8"],["宝蓝","#2A4AC8"],["深蓝","#1E3A9E"],["藏蓝","#1E3078"],
-    ["靛蓝","#2830A0"],["灰蓝","#7A8AA8"],["雾蓝","#9FB4C8"],["钢蓝","#607090"],
-    ["浅紫","#D6C4F2"],["薰衣草","#B8A0E8"],["淡丁香","#C8B8E8"],["粉紫","#D8A8D8"],
-    ["紫","#8A5AD0"],["蓝紫","#6A58D0"],["深紫","#4E2A8E"],["紫罗兰","#7A48C0"],
-    ["烟灰紫","#9A8CB8"],
-    ["浅肤","#F7DDC0"],["肤色","#F2C9A0"],["深肤","#E8B48A"],["浅棕","#B08754"],
-    ["棕","#8A5A30"],["深棕","#5E3B1E"],["咖啡","#4A2F18"],["驼色","#B08A5A"],
-    ["卡其","#C8B27A"],["米色","#E8D8B8"],["沙色","#D9C09A"],["巧克力","#6B4423"],
-    ["摩卡","#8C6E52"],
-    ["金","#D4AF37"],["铜","#B87333"],["银","#A8AEB8"]
-  ]),
-  common48: makePalette([
-    ["白","#FFFFFF"],["米白","#F5F0E6"],["浅灰","#C8C8C8"],["灰","#9A9A9A"],
-    ["深灰","#6B6B6B"],["黑","#1A1A1A"],["浅粉","#F8C8D8"],["粉","#F4A7B9"],
-    ["玫粉","#E86A8C"],["酒红","#8E1F3F"],["红","#D72C2C"],["深红","#A61414"],
-    ["砖红","#B04A2A"],["橘红","#E85C2A"],["橙","#F28C28"],["杏黄","#F5B942"],
-    ["黄","#FFD82E"],["柠檬黄","#F7E94E"],["浅黄","#FBF0A0"],["卡其","#C8B27A"],
-    ["驼色","#B08A5A"],["浅棕","#A97C50"],["棕","#7A4E2A"],["深棕","#4E3018"],
-    ["肤色","#F2C9A0"],["浅肤","#F7DDC0"],["青柠","#C8E84A"],["草绿","#7CB83C"],
-    ["绿","#3FA033"],["深绿","#1F6E2A"],["墨绿","#14421E"],["薄荷","#9FE0C8"],
-    ["橄榄","#6E7A2A"],["青","#35C8C8"],["湖蓝","#5AA8E8"],["天蓝","#7FC8F0"],
-    ["浅蓝","#C0E0F8"],["蓝","#3A6FD8"],["宝蓝","#2A4AC8"],["藏蓝","#1E3078"],
-    ["靛蓝","#2830A0"],["紫","#7A4AC8"],["浅紫","#C0A8E8"],["粉紫","#D8A8D8"],
-    ["深紫","#4E2A8E"],["蓝紫","#5A48C8"],["灰蓝","#7A8AA8"],["银灰","#D8D8E0"]
-  ]),
-  common24: makePalette([
-    ["白","#FFFFFF"],["浅灰","#C8C8C8"],["灰","#9A9A9A"],["深灰","#6B6B6B"],
-    ["黑","#1A1A1A"],["粉","#F4A7B9"],["玫粉","#E86A8C"],["红","#D72C2C"],
-    ["深红","#A61414"],["橙","#F28C28"],["黄","#FFD82E"],["柠檬黄","#F7E94E"],
-    ["浅棕","#A97C50"],["棕","#7A4E2A"],["深棕","#4E3018"],["肤色","#F2C9A0"],
-    ["草绿","#7CB83C"],["绿","#3FA033"],["深绿","#1F6E2A"],["湖蓝","#5AA8E8"],
-    ["天蓝","#7FC8F0"],["蓝","#3A6FD8"],["藏蓝","#1E3078"],["紫","#7A4AC8"]
-  ])
-};
-window.__core = {
-  hexToRgb: hexToRgb, rgbToHex: rgbToHex, srgbToLab: srgbToLab, matchColor: matchColor,
-  quantize: quantize, colLabel: colLabel, gridToCSV: gridToCSV, countsToCSV: countsToCSV,
-  buildProject: buildProject, parsePaletteText: parsePaletteText, adjustColor: adjustColor,
-  srgbLuma: srgbLuma, PALETTES: PALETTES
-};
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = PindouCore;
+
 </script>
 
+
 <script>
+
 document.addEventListener("DOMContentLoaded", function(){
   "use strict";
+  var Core = window.PindouCore;
+  var PALETTES = window.PINDOU_PALETTES;
+  var colLabel = Core.colLabel, cellText = Core.cellText, cellCode = Core.cellCode,
+      gridToCSV = Core.gridToCSV, countsToCSV = Core.countsToCSV, buildProject = Core.buildProject,
+      srgbLuma = Core.srgbLuma;
+  var parsePaletteText = function (text) { return Core.parsePaletteText(text); };
+  function paletteByKey(key){ return Core.compilePalette(PALETTES[key]); }
   var $ = function(id){ return document.getElementById(id); };
   var pickBtn = $("pickBtn"), cameraBtn = $("cameraBtn"), fileInput = $("fileInput"), cameraInput = $("cameraInput"),
       dropZone = $("dropZone"), srcPreview = $("srcPreview"), srcImg = $("srcImg"),
@@ -1173,8 +1333,8 @@ document.addEventListener("DOMContentLoaded", function(){
 
   var state = {
     cols: 52, rows: 52,
-    palette: PALETTES.common256, paletteKey: "common256",
-    img: null, srcName: "", srcUrl: null,
+    palette: paletteByKey("common424"), paletteKey: "common424",
+    img: null, srcName: "", srcUrl: null, imageData: null, imageW: 0, imageH: 0, sample: null,
     grid: null, counts: null, totalBeads: 0, usedColors: 0,
     brush: 0, tool: "view", undoStack: [],
     lastBlob: null, lastName: "", resultUrl: null
@@ -1183,12 +1343,8 @@ document.addEventListener("DOMContentLoaded", function(){
   /* 颜色精简档位：
      passes = 去杂色遍数；merge = 相近色合并阈值（Lab 色差）；
      region = 区域统一的容差与最小格数（把被劈成两色的整片区域并回一色） */
-  var SIMPLIFY = {
-    "0": null,
-    "1": { merge: 6 },
-    "2": { passes: 2, merge: 10, region: { tol: 8, min: 10, spread: 3.5 } },
-    "3": { passes: 3, merge: 14, region: { tol: 14, min: 5, spread: 6 } }
-  };
+  /* 颜色精简：值为 0=关闭，或允许的最大用色数 */
+
   var autoTimer = null, needsFit = true, renderPending = false;
 
   /* ---------------- 小工具 ---------------- */
@@ -1245,6 +1401,10 @@ document.addEventListener("DOMContentLoaded", function(){
       try { URL.revokeObjectURL(state.srcUrl); } catch (e) {}
     }
     state.img = img;
+    state.imageData = null;
+    state.imageW = 0;
+    state.imageH = 0;
+    state.sample = null;
     state.srcName = name || "图片";
     state.srcUrl = url;
     srcImg.src = url;
@@ -1369,12 +1529,14 @@ document.addEventListener("DOMContentLoaded", function(){
       if (!customPalette){ toastMsg("还没有自定义色卡，先点下面的按钮导入"); paletteSelect.value = state.paletteKey; return; }
       state.palette = customPalette;
     } else {
-      state.palette = PALETTES[key];
+      state.palette = paletteByKey(key);
     }
     state.paletteKey = key;
     savePref("palette", key);
+    state.grid = null;
+    state.counts = null;
     renderPaletteInfo();
-    autoConvert();
+    if (state.img) convert(); else autoConvert();
   });
   importPaletteBtn.addEventListener("click", function(){ paletteImportBox.classList.toggle("hidden"); });
   paletteFile.addEventListener("change", function(){
@@ -1392,9 +1554,11 @@ document.addEventListener("DOMContentLoaded", function(){
       state.paletteKey = "custom";
       savePref("palette", "custom");
       savePref("custompalette", paletteText.value);
+      state.grid = null;
+      state.counts = null;
       renderPaletteInfo();
       toastMsg("色卡已载入：" + customPalette.length + " 色");
-      autoConvert();
+      if (state.img) convert(); else autoConvert();
     } catch (err) {
       toastMsg(err && err.message ? err.message : "色卡格式不对");
     }
@@ -1447,95 +1611,46 @@ document.addEventListener("DOMContentLoaded", function(){
   bgThresh.addEventListener("input", function(){ vBg.textContent = bgThresh.value; });
   bgThresh.addEventListener("change", function(){ autoConvert(); });
 
-  /* ---------------- 采样 + 量化 ---------------- */
-  /*
-   * 采样：每格切成 S×S 个小采样点。
-   * 既算平均色（写实/平滑区的落点），也算"主色"（票数最多的那个颜色）。
-   * 边缘格子里 40% 是黑描边、60% 是皮肤时，取主色就得到黑——描边是硬的；
-   * 只取平均会得到灰糊糊的过渡色，这正是之前"边缘糊"的根源。
-   */
-  function samplePixels(img, cols, rows, fit, adj, opt, posX, posY, userZoom){
+  /* ---------------- 采样 + 量化（v15 新算法） ---------------- */
+  var MAX_SOURCE = 2048;
+  /* 把图片转成受内存限制的 ImageData：长边最多 2048，避免 iPad 上大图爆内存 */
+  function ensureImageData(){
+    if (state.imageData) return;
+    var img = state.img;
     var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     if (!iw || !ih) throw new Error("图片尺寸读取失败");
-    var S = Math.max(1, Math.min(24, Math.floor(1536 / Math.max(cols, rows))));
-    var W = cols * S, H = rows * S;
-    var cv = document.createElement("canvas");
-    cv.width = W; cv.height = H;
-    var ctx = cv.getContext("2d");
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, W, H);
-    /* 像素画/贴纸本身就是"一格一色"，平滑插值会把相邻两格混成脏色。
-       只有大幅缩小（照片常见）才开平滑；轻微缩放用最近邻，保住原色。 */
-    var fitScale;
-    if (fit === "stretch") fitScale = Math.max(W / iw, H / ih);
-    else if (fit === "contain") fitScale = Math.min(W / iw, H / ih);
-    else fitScale = Math.max(W / iw, H / ih) * (userZoom || 1);
-    ctx.imageSmoothingEnabled = fitScale < 0.55;
-    drawSmooth(ctx, img, iw, ih, W, H, fit, posX, posY, userZoom);
-    var data = ctx.getImageData(0, 0, W, H).data;
-    var avgs = [], picks = [];
-    for (var y = 0; y < rows; y++){
-      var rowA = new Array(cols), rowP = new Array(cols);
-      for (var x = 0; x < cols; x++){
-        var sr = 0, sg = 0, sb = 0, n = 0, o;
-        var hist = {}, bestKey = null, bestN = 0;
-        for (var py = y * S; py < y * S + S; py++){
-          var base = py * W * 4;
-          for (var px = x * S; px < x * S + S; px++){
-            o = base + px * 4;
-            var rr = data[o], gg = data[o+1], bb = data[o+2];
-            sr += rr; sg += gg; sb += bb; n++;
-            var key = (rr >> 3) + "," + (gg >> 3) + "," + (bb >> 3);
-            var hh = hist[key];
-            if (!hh){ hh = hist[key] = { n: 0, r: 0, g: 0, b: 0 }; }
-            hh.n++; hh.r += rr; hh.g += gg; hh.b += bb;
-            if (hh.n > bestN){ bestN = hh.n; bestKey = key; }
-          }
-        }
-        var avg = [sr / n, sg / n, sb / n];
-        var dom = bestN ? hist[bestKey] : null;
-        var domShare = n ? bestN / n : 0;
-        var pick = (dom && domShare >= 0.35) ? [dom.r / dom.n, dom.g / dom.n, dom.b / dom.n] : avg;
-        var ca = adjustColor(avg, adj);
-        var cp = adjustColor(pick, adj);
-        var empty = opt.removeBg && srgbLuma(ca[0], ca[1], ca[2]) >= opt.bgThresh;
-        rowA[x] = empty ? null : ca;
-        rowP[x] = empty ? null : cp;
-      }
-      avgs.push(rowA);
-      picks.push(rowP);
-    }
-    return { avg: avgs, pick: picks };
-  }
-  /* 大图先逐级折半再缩放，避免一次性缩小产生锯齿 */
-  function drawSmooth(ctx, img, iw, ih, W, H, fit, posX, posY, userZoom){
-    var src = img, sw = iw, sh = ih, limit = Math.max(W, H) * 2;
-    while (Math.max(sw, sh) > limit && Math.max(sw, sh) > 8){
+    var scale = Math.min(1, MAX_SOURCE / Math.max(iw, ih));
+    var sw = iw, sh = ih, src = img;
+    while (Math.max(sw, sh) > MAX_SOURCE * 2 && Math.max(sw, sh) > 8){
       var nw = Math.max(1, Math.round(sw / 2)), nh = Math.max(1, Math.round(sh / 2));
       var t = document.createElement("canvas");
       t.width = nw; t.height = nh;
       var tc = t.getContext("2d");
       tc.imageSmoothingEnabled = true;
-      if ("imageSmoothingQuality" in tc) tc.imageSmoothingQuality = "high";
+      tc.imageSmoothingQuality = "high";
       tc.drawImage(src, 0, 0, nw, nh);
       src = t; sw = nw; sh = nh;
     }
-    if (fit === "stretch"){
-      ctx.drawImage(src, 0, 0, W, H);
-    } else if (fit === "contain"){
-      var s0 = Math.min(W / sw, H / sh);
-      var dw0 = sw * s0, dh0 = sh * s0;
-      ctx.drawImage(src, (W - dw0) / 2, (H - dh0) / 2, dw0, dh0);
-    } else {
-      /* 裁切铺满：允许用户平移 + 缩放，长图也能挑到想要的那一段 */
-      var s = Math.max(W / sw, H / sh) * (userZoom || 1);
-      var dw = sw * s, dh = sh * s;
-      var ox = (typeof posX === "number") ? (W - dw) * posX : (W - dw) / 2;
-      var oy = (typeof posY === "number") ? (H - dh) * posY : (H - dh) / 2;
-      ctx.drawImage(src, ox, oy, dw, dh);
-    }
+    var cw = Math.max(1, Math.round(sw * scale)), ch = Math.max(1, Math.round(sh * scale));
+    var cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch;
+    var c2 = cv.getContext("2d", { willReadFrequently: true });
+    c2.imageSmoothingEnabled = true;
+    c2.imageSmoothingQuality = "high";
+    c2.fillStyle = "#FFFFFF";
+    c2.fillRect(0, 0, cw, ch);
+    c2.drawImage(src, 0, 0, cw, ch);
+    state.imageData = c2.getImageData(0, 0, cw, ch);
+    state.imageW = cw; state.imageH = ch;
   }
-
+  function sampleOptions(){
+    return {
+      fit: fitMode,
+      posX: parseInt(cropX.value, 10) / 100,
+      posY: parseInt(cropY.value, 10) / 100,
+      zoom: (parseInt(cropZoom.value, 10) || 100) / 100
+    };
+  }
   function convert(){
     if (!state.img){
       canvasSizer.classList.add("hidden");
@@ -1543,47 +1658,29 @@ document.addEventListener("DOMContentLoaded", function(){
       previewPlaceholder.classList.remove("hidden");
       return null;
     }
-    var adj = { bright: +adjBright.value, contrast: +adjContrast.value, sat: +adjSat.value };
-    var opt = { removeBg: removeBgChk.checked, bgThresh: +bgThresh.value };
-    var sampled = samplePixels(state.img, state.cols, state.rows, fitMode, adj, opt,
-                               parseInt(cropX.value, 10) / 100,
-                               parseInt(cropY.value, 10) / 100,
-                               (parseInt(cropZoom.value, 10) || 100) / 100);
-    var pixels = sampled.pick;
-    var rawPixels = sampled.avg;                  // 区域统一切割用真实平均色，不用锐化后的
-    /* 色噪清理常开：它只压色度噪点，不合并颜色，所以和"颜色精简"互不影响。
-       精简档位越大，降噪窗口也越大（中/强力用 5×5）。 */
-    var chromaR = (simplifySel.value === "2" || simplifySel.value === "3") ? 2 : 1;
-    pixels = denoiseChroma(pixels, state.rows, state.cols, chromaR);
-    var sharpen = parseFloat(sharpenSel.value) || 0;
-    if (sharpen > 0) pixels = sharpenGrid(pixels, state.rows, state.cols, sharpen);
-    var res = quantize(pixels, state.rows, state.cols, state.palette, ditherMode === "dither");
-    var grid = res.grid, counts = res.counts;
-    /* 孤立单颗也一律清掉（有线连着的、成小团的细节都保留） */
-    grid = despeckleGrid(grid, state.rows, state.cols, 1);
-    counts = recountGrid(grid, state.palette.length);
-    /* 同亮度但色相跑偏的少量离群色，任何档位都并回主色（不改明暗层次） */
-    grid = mergeHueOutliers(grid, counts, state.palette, 8, 8, 26);
-    counts = recountGrid(grid, state.palette.length);
-    /* 颜色精简：先并掉零散单颗，再把相近的深浅色合成一种 */
-    var lvl = SIMPLIFY[simplifySel.value];
-    if (lvl){
-      if (lvl.region){
-        grid = unifyRegions(grid, rawPixels, state.rows, state.cols, state.palette,
-                            lvl.region.tol, lvl.region.min, lvl.region.spread);
-        counts = recountGrid(grid, state.palette.length);
-      }
-      if (lvl.passes){
-        grid = despeckleGrid(grid, state.rows, state.cols, lvl.passes);
-        counts = recountGrid(grid, state.palette.length);
-      }
-      if (lvl.merge){
-        grid = mergeSimilarColors(grid, counts, state.palette, lvl.merge);
-        counts = recountGrid(grid, state.palette.length);
-      }
+    ensureImageData();
+    var geo = sampleOptions();
+    var key = state.cols + "x" + state.rows + "|" + geo.fit + "|" + geo.posX + "|" + geo.posY + "|" + geo.zoom;
+    if (!state.sample || state.sample.key !== key){
+      state.sample = {
+        key: key,
+        data: Core.sampleCells(state.imageData, state.imageW, state.imageH, state.cols, state.rows, geo)
+      };
     }
-    state.grid = grid;
-    state.counts = counts;
+    var adj = { bright: +adjBright.value, contrast: +adjContrast.value, sat: +adjSat.value };
+    var result = Core.convertCells(state.sample.data, state.cols, state.rows, state.palette, {
+      adj: adj,
+      removeBg: removeBgChk.checked,
+      bgThresh: +bgThresh.value,
+      edge: +sharpenSel.value || 0,
+      dither: ditherMode === "dither",
+      maxColors: parseInt(simplifySel.value, 10) || 0,
+      lambda: 1,
+      iters: 2
+    });
+    state.grid = result.grid;
+    state.counts = result.counts;
+    state.convId = (state.convId || 0) + 1;
     recalcTotals();
     state.undoStack = [];
     if (state.brush >= state.palette.length || !state.counts[state.brush]) pickDefaultBrush();
@@ -1758,7 +1855,9 @@ document.addEventListener("DOMContentLoaded", function(){
           }
           continue;
         }
-        ctx.fillStyle = palette[idx].hex;
+        var palColor = palette[idx];
+        if (!palColor) continue;
+        ctx.fillStyle = palColor.hex;
         ctx.fillRect(labelW + x * cellPx, labelH + y * cellPx, cellPx, cellPx);
         if (codeMode){
           var txt = cellCode(idx, palette, codeMode);
@@ -2168,7 +2267,8 @@ document.addEventListener("DOMContentLoaded", function(){
     if (savedKey === "custom" && customPalette){
       state.palette = customPalette; state.paletteKey = "custom"; paletteSelect.value = "custom";
     } else if (savedKey && PALETTES[savedKey] && savedKey !== "custom"){
-      state.palette = PALETTES[savedKey]; state.paletteKey = savedKey; paletteSelect.value = savedKey;
+      if (savedKey === "common256") savedKey = "common424";
+      state.palette = paletteByKey(savedKey); state.paletteKey = savedKey; paletteSelect.value = savedKey;
     }
   })();
   renderPaletteInfo();
@@ -2193,12 +2293,16 @@ document.addEventListener("DOMContentLoaded", function(){
     mf.href = "manifest.webmanifest";
     document.head.appendChild(mf);
   }
+  /* 调试钩子：方便自动化测试读取内部状态，不影响正常使用 */
+  window.PindouDebug = { state: state, convert: convert, Core: Core, PALETTES: PALETTES };
   window.addEventListener("resize", function(){
     if (!state.grid) return;
     applyZoom();
   });
 });
+
 </script>
+
 </body>
 </html>
 

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="拼豆豆图">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#F57C2A">
+<meta name="description" content="把图片转换成拼豆豆图，适配 104/78/52/32 等主流智能拼豆板，可导出可导入拼豆 App 的图纸">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23F57C2A'/%3E%3Crect%20x='6'%20y='6'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='14'%20y='6'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='22'%20y='6'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='6'%20y='14'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='14'%20y='14'%20width='6'%20height='6'%20rx='2'%20fill='%23FFE2C2'/%3E%3Crect%20x='22'%20y='14'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='6'%20y='22'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='14'%20y='22'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3Crect%20x='22'%20y='22'%20width='6'%20height='6'%20rx='2'%20fill='%23fff'/%3E%3C/svg%3E">
+<title>拼豆豆图生成器 · iPad 版</title>
+<style>
+  :root{
+    --primary:#F57C2A; --primary-dark:#D96612; --primary-light:#FFF1E6;
+    --ink:#2B2B2B; --muted:#6E6E6E; --line:#E6E2DC; --bg:#F7F5F2; --card:#FFFFFF;
+    --radius:14px; --shadow:0 2px 10px rgba(0,0,0,.06);
+    --sa-l:env(safe-area-inset-left); --sa-r:env(safe-area-inset-right);
+    --sa-b:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  html{-webkit-text-size-adjust:100%; text-size-adjust:100%;}
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", "Noto Sans SC", sans-serif;
+    background:var(--bg); color:var(--ink); font-size:16px; line-height:1.6;
+    overflow-x:hidden;
+  }
+  header{
+    background:linear-gradient(135deg,#FF9A3D,#F57C2A 55%,#E85C2A);
+    color:#fff; text-align:center;
+    padding:calc(20px + env(safe-area-inset-top)) calc(16px + var(--sa-r)) 22px calc(16px + var(--sa-l));
+  }
+  header .logo{display:inline-flex; align-items:center; gap:10px; font-size:32px; font-weight:700; letter-spacing:1px;}
+  header p{margin:6px 0 0; font-size:14.5px; opacity:.95;}
+  main{
+    max-width:1080px; margin:0 auto;
+    padding:16px calc(12px + var(--sa-r)) calc(30px + var(--sa-b)) calc(12px + var(--sa-l));
+  }
+  .card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px;}
+  @media (min-width:760px){ .card{padding:20px;} main{padding-top:20px;} }
+  .card h2{font-size:17px; margin:0 0 12px; color:var(--primary-dark); display:flex; align-items:center; gap:8px;}
+  .card h2::before{content:""; width:6px; height:16px; border-radius:3px; background:var(--primary); display:inline-block; flex:0 0 auto;}
+  .card h2.tight{margin-top:18px;}
+  .layout{display:grid; grid-template-columns:minmax(300px,420px) 1fr; gap:14px;}
+  .layout > *{min-width:0;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+  button{
+    font-family:inherit; font-size:15px; border:none; border-radius:10px; cursor:pointer;
+    padding:11px 15px; background:#F1EDE8; color:var(--ink);
+    transition:transform .06s, background .15s; touch-action:manipulation;
+    min-height:44px; -webkit-user-select:none; user-select:none;
+  }
+  button:active{transform:scale(.97);}
+  button.primary{background:var(--primary); color:#fff; font-weight:600;}
+  button.big{width:100%; padding:15px; font-size:17px; margin-top:8px;}
+  button.small{padding:8px 12px; font-size:13.5px; border-radius:9px; min-height:36px;}
+  button[disabled]{opacity:.45; cursor:not-allowed;}
+  input[type=file]{display:none;}
+  select, input[type=number], input[type=text], textarea{
+    font-family:inherit; font-size:16px; padding:10px; border:1px solid #D8D2CA;
+    border-radius:10px; background:#fff; color:var(--ink); width:100%; min-height:42px;
+    -webkit-appearance:none; appearance:none;
+  }
+  select{background-image:linear-gradient(45deg,transparent 50%,#888 50%),linear-gradient(135deg,#888 50%,transparent 50%);
+    background-position:calc(100% - 16px) 18px, calc(100% - 11px) 18px; background-size:5px 5px,5px 5px; background-repeat:no-repeat; padding-right:34px;}
+  textarea{resize:vertical; min-height:110px; -webkit-appearance:none; appearance:none;}
+  input[type=range]{width:100%; accent-color:var(--primary); height:44px; margin:0;}
+  input[type=checkbox]{width:22px; height:22px; accent-color:var(--primary); margin:0; flex:0 0 auto;}
+  .drop{
+    border:2px dashed #D8B89A; border-radius:12px; background:var(--primary-light);
+    padding:26px 16px; text-align:center; cursor:pointer; transition:background .15s, border-color .15s;
+  }
+  .drop.dragover{border-color:var(--primary); background:#FFE8D6;}
+  .drop .icon{margin:0 auto 8px; width:50px; height:50px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:14px; box-shadow:var(--shadow);}
+  .drop .main{font-weight:600; font-size:17px; margin:0 0 4px;}
+  .drop .sub{color:var(--muted); font-size:13px; margin:0;}
+  .pick-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .pick-row button{flex:1 1 150px; background:#fff; border:1.5px solid #E2D6C8; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .src-preview{display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap;}
+  .src-preview img{max-width:130px; max-height:130px; border-radius:10px; border:1px solid var(--line);}
+  .src-preview .meta{flex:1 1 160px; min-width:0;}
+  .src-preview .meta .name{font-weight:600; word-break:break-all; font-size:14.5px;}
+  .src-preview .meta .info{color:var(--muted); font-size:13px;}
+  .hidden{display:none !important;}
+  .size-btns{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;}
+  .size-btns button{font-size:15px; padding:12px 2px; font-weight:600; border:2px solid transparent; background:#F1EDE8;}
+  .size-btns button.active{background:var(--primary); color:#fff;}
+  @media (hover:hover){ .size-btns button:not(.active):hover{border-color:var(--primary);} }
+  .row{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;}
+  .row label{font-size:13.5px; color:var(--muted); white-space:nowrap; min-height:40px; display:flex; align-items:center;}
+  .row input[type=number]{max-width:82px;}
+  .row select{flex:1 1 150px;}
+  .opt-label{display:block; font-size:13.5px; color:var(--muted); margin:14px 0 6px;}
+  .radio-group{display:flex; gap:8px; flex-wrap:wrap;}
+  .radio-group label{
+    flex:1 1 140px; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-size:14px; display:flex; align-items:center; gap:8px; cursor:pointer; background:#FAF8F5;
+    min-height:44px;
+  }
+  .radio-group input{width:20px; height:20px; accent-color:var(--primary); flex:0 0 auto;}
+  .palette-info{font-size:13px; color:var(--muted); margin:4px 0 8px;}
+  .palette-swatches{display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;}
+  .swatch{width:22px; height:22px; border-radius:5px; border:1px solid rgba(0,0,0,.12);}
+  .slider-row{display:flex; align-items:center; gap:10px; margin-top:4px;}
+  .slider-row span.v{font-size:13px; color:var(--muted); width:38px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums;}
+  .checks{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+  .checks label{display:flex; align-items:center; gap:10px; font-size:14px; min-height:44px;}
+  .preview-wrap{
+    overflow:auto; -webkit-overflow-scrolling:touch;
+    background:repeating-conic-gradient(#f0efec 0 25%, #fff 0 50%) 0 0/20px 20px;
+    border-radius:10px; border:1px solid var(--line); min-height:180px; max-height:min(560px,62vh);
+    display:flex; align-items:flex-start; justify-content:flex-start;
+  }
+  /* 画布绝对定位：缩放后不会把页面撑宽（否则手机浏览器会整页缩小） */
+  #canvasSizer{padding:10px; flex:0 0 auto; position:relative; min-width:0;}
+  #previewCanvas{position:absolute; top:10px; left:10px; display:block; transform-origin:top left; image-rendering:pixelated;}
+  #previewCanvas.paintable{touch-action:none;}
+  .placeholder{flex:1; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:14px; padding:52px 12px; text-align:center;}
+  .controls{display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:10px; font-size:14px;}
+  .controls label{display:flex; align-items:center; gap:8px; min-height:44px;}
+  .tools{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+  .tools button{background:#F1EDE8; font-size:14px;}
+  .tools button.active{background:var(--primary); color:#fff; font-weight:600;}
+  .brush{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted);}
+  .brush i{width:22px; height:22px; border-radius:6px; border:1px solid rgba(0,0,0,.15); display:inline-block;}
+  .counts{display:grid; grid-template-columns:repeat(auto-fill,minmax(146px,1fr)); gap:8px; max-height:300px; overflow:auto; -webkit-overflow-scrolling:touch;}
+  .count-item{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:7px 9px; font-size:13px; cursor:pointer; background:#fff;}
+  .count-item.sel{border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-light);}
+  .count-item .c-swatch{width:26px; height:26px; border-radius:6px; border:1px solid rgba(0,0,0,.1); flex:0 0 auto;}
+  .count-item .c-name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .count-item .c-num{font-weight:700; color:var(--primary-dark); font-variant-numeric:tabular-nums;}
+  .tip{background:var(--primary-light); border-radius:10px; padding:10px 12px; font-size:13.5px; margin:0 0 12px; color:#7A4A1A; line-height:1.65;}
+  .tip b{color:#5E360F;}
+  .hint{color:var(--muted); font-size:12.8px; margin:6px 0 0;}
+  .export-btns{display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:9px;}
+  .export-result{margin-top:16px; border-top:1px solid var(--line); padding-top:14px;}
+  .export-result img{max-width:100%; border:1px solid var(--line); border-radius:10px; image-rendering:pixelated; -webkit-touch-callout:default; -webkit-user-select:auto; user-select:auto;}
+  .dl{display:inline-block; margin-top:10px; background:var(--primary); color:#fff; font-weight:600; text-decoration:none; padding:12px 20px; border-radius:10px; font-size:15px;}
+  .howto ol{margin:6px 0 0; padding-left:20px;}
+  .howto li{margin-bottom:8px; font-size:14.5px;}
+  .howto .tag{display:inline-block; background:var(--primary-light); color:var(--primary-dark); border-radius:6px; padding:0 7px; font-size:12.5px; font-weight:600; margin-right:2px;}
+  .howto code{background:#F3F0EB; border-radius:5px; padding:1px 5px; font-size:13px;}
+  footer{text-align:center; color:var(--muted); font-size:12.8px; padding:6px calc(16px + var(--sa-r)) calc(26px + var(--sa-b)) calc(16px + var(--sa-l));}
+  .toast{
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(28px + var(--sa-b)); background:rgba(30,30,30,.93); color:#fff;
+    padding:11px 18px; border-radius:11px; font-size:14px; z-index:99; opacity:0;
+    transition:opacity .2s; pointer-events:none; max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true">
+      <rect x="2" y="2" width="30" height="30" rx="7" fill="rgba(255,255,255,.25)"/>
+      <rect x="6" y="6" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="14" y="6" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="22" y="6" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="6" y="14" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="14" y="14" width="6" height="6" rx="2" fill="#FFE2C2"/>
+      <rect x="22" y="14" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="6" y="22" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="14" y="22" width="6" height="6" rx="2" fill="#fff"/>
+      <rect x="22" y="22" width="6" height="6" rx="2" fill="#fff"/>
+    </svg>
+    拼豆豆图生成器
+  </div>
+  <p>图片 → 豆图 · 适配 104 / 78 / 52 / 32 主流智能拼豆板 · 图纸可导入拼豆 App</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>第一步 · 选图片</h2>
+    <div class="pick-row">
+      <button id="pickBtn" type="button">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#F57C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        从相册 / 文件选图
+      </button>
+      <button id="cameraBtn" type="button">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#F57C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        直接拍照
+      </button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    <div class="drop" id="dropZone">
+      <div class="icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F57C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+        </svg>
+      </div>
+      <p class="main">把图片拖到这里</p>
+      <p class="sub">iPad 可从「照片 / 文件」直接拖进来 · 电脑可直接拖拽</p>
+    </div>
+    <div class="src-preview hidden" id="srcPreview">
+      <img id="srcImg" alt="原图预览">
+      <div class="meta">
+        <div class="name" id="srcName"></div>
+        <div class="info" id="srcInfo"></div>
+        <button class="small" id="changeImgBtn" style="margin-top:6px;">换一张图</button>
+      </div>
+    </div>
+    <p class="hint">所有处理都在你自己的设备上完成，图片不会上传到任何服务器。</p>
+  </section>
+
+  <div class="layout">
+    <section class="card">
+      <h2>第二步 · 板子尺寸</h2>
+      <div class="size-btns" id="sizeBtns">
+        <button data-c="32" data-r="32">32×32</button>
+        <button data-c="52" data-r="52" class="active">52×52</button>
+        <button data-c="78" data-r="78">78×78</button>
+        <button data-c="104" data-r="104">104×104</button>
+      </div>
+      <div class="row">
+        <select id="moreSize">
+          <option value="">更多常用尺寸…</option>
+          <option value="16x16">16 × 16</option>
+          <option value="24x24">24 × 24</option>
+          <option value="29x29">29 × 29</option>
+          <option value="48x48">48 × 48</option>
+          <option value="57x57">57 × 57</option>
+          <option value="58x29">58 × 29（双板）</option>
+          <option value="64x64">64 × 64</option>
+          <option value="96x96">96 × 96</option>
+          <option value="128x128">128 × 128</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="cw">自定义</label>
+        <input type="number" id="cw" min="10" max="300" inputmode="numeric" placeholder="宽">
+        <span style="color:var(--muted);">×</span>
+        <input type="number" id="ch" min="10" max="300" inputmode="numeric" placeholder="高">
+        <button class="small" id="applyCustom">应用</button>
+      </div>
+
+      <span class="opt-label">豆子颜色（色板）</span>
+      <select id="paletteSelect">
+        <option value="common424" selected>通用 424 色 · 真实豆色（推荐）</option>
+        <option value="dbk221">大嘴巴拼豆 221 色 · 现货色号</option>
+        <option value="common96">通用 96 色 · 精简真实色</option>
+        <option value="common48">通用 48 色 · 兼容常见拼豆板</option>
+        <option value="common24">通用 24 色 · 精简好买</option>
+        <option value="custom">我的自定义色卡</option>
+      </select>
+      <div class="palette-info" id="paletteInfo"></div>
+      <div class="palette-swatches" id="paletteSwatches"></div>
+      <div class="row">
+        <button class="small" id="importPaletteBtn">导入我手上的豆子色卡</button>
+      </div>
+      <div class="hidden" id="paletteImportBox">
+        <p class="hint" style="margin:8px 0 6px;">每行一个颜色：<code>色名,#RRGGBB</code> 或 <code>色名,R,G,B</code>，也可以只写 <code>#RRGGBB</code>。</p>
+        <textarea id="paletteText" placeholder="例如：&#10;大红,#D72C2C&#10;天蓝,127,200,240&#10;#FFFFFF"></textarea>
+        <div class="row">
+          <input type="file" id="paletteFile" accept=".csv,.txt,text/plain,text/csv" style="display:block; flex:1 1 150px; padding:8px; min-height:42px;">
+          <button class="primary small" id="applyPalette">应用色卡</button>
+        </div>
+      </div>
+
+      <h2 class="tight">第三步 · 转换设置</h2>
+      <span class="opt-label">颜色匹配</span>
+      <div class="radio-group">
+        <label><input type="radio" name="dither" value="smooth" checked> 平滑 · 色块干净</label>
+        <label><input type="radio" name="dither" value="dither"> 抖动 · 渐变细腻</label>
+      </div>
+      <p class="hint">平滑：按每格真实平均色匹配色卡，颜色最准、色块最干净，照片和卡通首选。抖动：用细颗粒拼出更顺的渐变，但会明显增加用色和颗粒感，拼豆一般不推荐；只在纯渐变背景上偶尔使用。</p>
+      <span class="opt-label">图片怎么放进板子</span>
+      <div class="radio-group">
+        <label><input type="radio" name="fit" value="cover" checked> 裁切铺满</label>
+        <label><input type="radio" name="fit" value="contain"> 完整留白</label>
+        <label><input type="radio" name="fit" value="stretch"> 拉伸变形</label>
+      </div>
+      <div class="hidden" id="cropBox" style="margin-top:6px;">
+        <p class="hint" style="margin:0 0 4px;">长图 / 宽图可以左右上下挑想要的那一段，也能放大裁一小块。</p>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">左右</label><input type="range" id="cropX" min="0" max="100" value="50"><span class="v" id="vCropX">50</span></div>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">上下</label><input type="range" id="cropY" min="0" max="100" value="50"><span class="v" id="vCropY">50</span></div>
+        <div class="slider-row"><label style="width:34px; flex:0 0 34px; font-size:13px; color:var(--muted);">缩放</label><input type="range" id="cropZoom" min="100" max="300" value="100"><span class="v" id="vCropZoom">100%</span></div>
+      </div>
+
+      <span class="opt-label">颜色精简（限制总用色数，买豆更省）</span>
+      <select id="simplify">
+        <option value="0" selected>关闭 · 最接近原图（推荐）</option>
+        <option value="96">轻度 · 最多 96 色</option>
+        <option value="48">中度 · 最多 48 色</option>
+        <option value="24">强力 · 最多 24 色</option>
+      </select>
+
+      <span class="opt-label">线条增强（粗描边 / 黑白线稿 / logo）</span>
+      <select id="sharpen">
+        <option value="0" selected>关闭 · 照片推荐（最忠实原图）</option>
+        <option value="1">轻度 · 粗描边更清楚（卡通）</option>
+        <option value="2">标准 · 黑白线稿 / logo（细线也会加粗）</option>
+      </select>
+      <p class="hint">照片默认关闭。卡通、表情包这类"大色块 + 硬描边"的图选「轻度」，能保住深色描边不被平均成灰边；黑白线稿 / logo 选「标准」，连很细的黑线也会尽量保留（代价是线条会变粗一点、色差略增）。照片请不要开，会多出黑边。</p>
+
+      <span class="opt-label">亮度</span>
+      <div class="slider-row"><input type="range" id="adjBright" min="-60" max="60" step="1" value="0"><span class="v" id="vBright">0</span></div>
+      <span class="opt-label">对比度</span>
+      <div class="slider-row"><input type="range" id="adjContrast" min="-60" max="60" step="1" value="0"><span class="v" id="vContrast">0</span></div>
+      <span class="opt-label">饱和度</span>
+      <div class="slider-row"><input type="range" id="adjSat" min="-100" max="100" step="1" value="0"><span class="v" id="vSat">0</span></div>
+      <div class="row"><button class="small" id="adjReset">还原画面调整</button></div>
+
+      <div class="checks">
+        <label><input type="checkbox" id="removeBg"> 把浅色背景变成空豆（不拼的地方留空）</label>
+      </div>
+      <div class="slider-row"><input type="range" id="bgThresh" min="180" max="254" step="1" value="242" disabled><span class="v" id="vBg">242</span></div>
+
+      <button class="primary big" id="convertBtn">生成豆图</button>
+    </section>
+
+    <section class="card">
+      <h2>豆图预览</h2>
+      <div class="preview-wrap" id="previewWrap">
+        <div id="canvasSizer"><canvas id="previewCanvas"></canvas></div>
+        <div class="placeholder" id="previewPlaceholder">选好图片后点「生成豆图」<br>这里会显示拼好的效果</div>
+      </div>
+      <div class="controls">
+        <label>放大 <input type="range" id="zoom" min="0.2" max="4" step="0.1" value="1" style="width:120px;"></label>
+        <label><input type="checkbox" id="previewGrid" checked> 网格</label>
+        <label><input type="checkbox" id="previewCodes"> 色号</label>
+        <button class="small" id="fitBtn">适应窗口</button>
+        <span style="color:var(--muted); font-size:13px;" id="gridInfo"></span>
+      </div>
+      <div class="tools">
+        <button class="small active" id="toolView" data-tool="view">查看</button>
+        <button class="small" id="toolPen" data-tool="pen">画笔</button>
+        <button class="small" id="toolErase" data-tool="erase">橡皮擦</button>
+        <button class="small" id="undoBtn">撤销</button>
+        <button class="small" id="clearBtn">全部擦掉</button>
+        <span class="brush">当前笔色 <i id="brushSwatch"></i><span id="brushName"></span></span>
+      </div>
+      <p class="hint">画笔 / 橡皮擦开启后，直接用手指或 Apple Pencil 在图上点一下或拖动就能改；点上色板里的颜色（下方用豆统计）可以换笔色。</p>
+
+      <h2 class="tight">用豆统计</h2>
+      <div class="counts" id="counts"><div class="placeholder" style="grid-column:1/-1;">生成后自动列出每种颜色要几颗豆</div></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>第四步 · 导出与导入拼豆 App</h2>
+    <p class="tip">
+      <b>想在智能拼豆板 App 里用？</b>优先导出「<b>精确像素图</b>」——它按 1 像素 = 1 颗豆生成，分辨率就是板子尺寸（如 104×104），在拼豆 App 里选「导入图片 / 自定义图纸」直接导入最准。<br>
+      <b>iPad / iPhone：</b>点「<b>分享 / 存到相册</b>」，在系统分享菜单里选你的拼豆 App，或选「存储图像」存到相册再从 App 里导入。<br>
+      <b>要打印图纸对着拼：</b>导出「高清图纸 PNG」，带网格和行列坐标，打印出来照着摆豆。
+    </p>
+    <div class="row">
+      <label>像素图放大</label>
+      <select id="pixelScale" style="flex:0 1 130px;">
+        <option value="1" selected>1 ×（一像素一豆）</option>
+        <option value="2">2 ×</option>
+        <option value="4">4 ×</option>
+        <option value="8">8 ×</option>
+      </select>
+      <label>图纸每格</label>
+      <select id="sheetCellPx" style="flex:0 1 110px;">
+        <option value="8">8 px</option>
+        <option value="16" selected>16 px</option>
+        <option value="24">24 px</option>
+        <option value="32">32 px</option>
+      </select>
+    </div>
+    <div class="row">
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportGrid" checked> 图纸网格</label>
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="exportLabels" checked> 行列坐标</label>
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="fillEmpty" checked> 空豆填白</label>
+      <label style="display:flex; align-items:center; gap:7px;"><input type="checkbox" id="codeSkipBg"> 背景格不标色号</label>
+    </div>
+    <div class="row">
+      <label>色号表内容</label>
+      <select id="csvMode" style="flex:0 1 200px;">
+        <option value="hex" selected>HEX 色值（#RRGGBB）</option>
+        <option value="idx">色号编号</option>
+        <option value="name">颜色名称</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>图纸每格显示</label>
+      <select id="cellCodes" style="flex:0 1 240px;">
+        <option value="none" selected>不显示（纯色块）</option>
+        <option value="name">色号名称（如 A14）</option>
+        <option value="idx">色号编号（1、2、3…）</option>
+      </select>
+    </div>
+    <p class="hint">选了「色号名称」后，导出的高清图纸会在每格中央印上色号，照着摆豆不用来回比对颜色；每格 16px 以下会看不清，建议 24px 以上。</p>
+    <p class="hint" style="margin-top:-4px;">「背景格不标色号」只影响印刷观感：勾上后，连成一整片的大背景不再重复印同一个号，图更清爽；要让每一格都有号（方便别的软件识别），保持不勾即可。</p>
+    <div class="export-btns" style="margin-top:12px;">
+      <button class="primary" id="shareBtn">分享 / 存到相册</button>
+      <button id="exportPixel">精确像素图 PNG</button>
+      <button id="exportSheet">高清图纸 PNG</button>
+      <button id="exportCsv">色号表 CSV</button>
+      <button id="exportJson">工程文件 JSON</button>
+      <button id="exportCounts">用豆清单 CSV</button>
+    </div>
+    <div class="export-result hidden" id="exportResult">
+      <p class="tip" id="exportTip"></p>
+      <img id="exportImg" alt="导出的图纸">
+      <br><a class="dl" id="exportLink" download>下载文件</a>
+    </div>
+  </section>
+
+  <section class="card howto">
+    <h2>iPad / iPhone 使用说明</h2>
+    <ol>
+      <li><span class="tag">手机 / 平板</span> 用 Safari 打开这个网址：<code>cairui03.github.io/pindou</code>。任何网络都能开，微信里点这个链接也能开。</li>
+      <li><span class="tag">当 App 用</span> 网址打开后，点「分享 → <b>添加到主屏幕</b>」，桌面就有图标了，之后打开是全屏、没有浏览器边框，跟 App 一样。</li>
+      <li><span class="tag">电脑上</span> 直接双击本文件、用浏览器打开也能用，全部功能都在（推荐 Chrome / Edge，Safari 也可以）。</li>
+      <li><span class="tag">为什么不能直接传文件</span> iOS 不允许 Safari 打开本地的 <code>.html</code>，微信也会直接拒收——长按文件出现的「打开方式」里永远没有 Safari，这是系统限制。所以手机 / 平板一律走上面的网址。</li>
+      <li><span class="tag">选图</span> 点「从相册 / 文件选图」选照片，或点「直接拍照」；iPad 上也能把照片直接拖进页面。</li>
+      <li><span class="tag">尺寸</span> 按你手上智能拼豆板的钉数选：<b>104×104</b>（约 62×62 cm 大板）、<b>78×78</b>、<b>52×52</b>、<b>32×32</b>；别的板子用「更多常用尺寸」或直接填宽×高。</li>
+      <li><span class="tag">色卡</span> 想严格对应你手上的豆子，就点「导入我手上的豆子色卡」，把你买的豆子的色号填进去；颜色越多渐变越顺，越少越好买。</li>
+      <li><span class="tag">导入 App</span> 导出「精确像素图 PNG」→ 点「分享 / 存到相册」→ 分享菜单里选拼豆 App，或先存到相册，再在拼豆 App 里导入这张图。</li>
+      <li><span class="tag">微调</span> 生成的豆图可直接用「画笔 / 橡皮擦」在预览区修改，改完再导出。</li>
+      <li><span class="tag">算法</span> 本次修复参考了 GitHub 上的高星开源项目：<a href="https://github.com/Zippland/perler-beads" target="_blank" rel="noopener">Zippland/perler-beads</a>（Oklab 距离）、<a href="https://github.com/LunarXuan/Pindo" target="_blank" rel="noopener">LunarXuan/Pindo</a>（线性光降采样、CIEDE2000）、<a href="https://github.com/zwhy149/bead-grid-studio" target="_blank" rel="noopener">zwhy149/bead-grid-studio</a>（Oklab 粗筛 + CIEDE2000 精排）、<a href="https://github.com/ImageOptim/libimagequant" target="_blank" rel="noopener">ImageOptim/libimagequant</a>（误差扩散阻尼）。色卡数据来自 MIT 许可的 <a href="https://github.com/maxcleme/beadcolors" target="_blank" rel="noopener">maxcleme/beadcolors</a>。</li>
+    </ol>
+  </section>
+</main>
+
+<footer>本工具完全离线运行 · 图片只在你的设备上处理 · <span id="ver">v15</span></footer>
+<div class="toast" id="toast"></div>
+
+<!--CORE-->
+
+
+<!--APP-->
+
+</body>
+</html>
+

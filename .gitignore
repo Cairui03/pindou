@@ -1,0 +1,11 @@
+_work/
+_repo/
+_deploy/
+_ref/
+_tok.txt
+_gh_check.ps1
+_gh_search.ps1
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
